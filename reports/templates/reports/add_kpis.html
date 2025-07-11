@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add KPIs</title>
+</head>
+<body>
+    <h2>Add KPIs to Goal: {{ goal.title }}</h2>
+
+<form method="post">
+    {% csrf_token %}
+    {{ formset.management_form }}
+    {% for form in formset %}
+        <div style="margin-bottom: 10px;">
+            {{ form.as_p }}
+        </div>
+    {% endfor %}
+    <button type="submit">Save KPIs</button>
+</form>
+
+<a href="{% url 'view_goals' goal.plan.id %}">← Back to Goals</a>
+
+</body>
+</html>
