@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Create {{ level|title }} Plan</h1>
+
+<form method="post">
+    {% csrf_token %}
+
+    <!-- Main Plan Form -->
+    <fieldset>
+        <legend>Plan Details</legend>
+        {{ plan_form.as_p }}
+    </fieldset>
+
+    <!-- KPI Formset -->
+    <fieldset>
+        <legend>Key Performance Indicators (KPIs)</legend>
+        {{ kpi_formset.management_form }}
+        {% for form in kpi_formset %}
+            <div class="formset-form">
+                {{ form.as_p }}
+            </div>
+        {% empty %}
+            <p>No KPIs yet.</p>
+        {% endfor %}
+    </fieldset>
+
+    <!-- Goals Formset -->
+    <fieldset>
+        <legend>Strategic Goals</legend>
+        {{ goal_formset.management_form }}
+        {% for form in goal_formset %}
+            <div class="formset-form">
+                {{ form.as_p }}
+            </div>
+        {% empty %}
+            <p>No Goals yet.</p>
+        {% endfor %}
+    </fieldset>
+
+    <!-- Activities Formset -->
+    <fieldset>
+        <legend>Activities</legend>
+        {{ activity_formset.management_form }}
+        {% for form in activity_formset %}
+            <div class="formset-form">
+                {{ form.as_p }}
+            </div>
+        {% empty %}
+            <p>No Activities yet.</p>
+        {% endfor %}
+    </fieldset>
+
+    <button type="submit">Save Plan</button>
+</form>
+{% endblock %}

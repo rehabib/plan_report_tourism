@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register as</title>
+</head>
+<body>
+    <h2>Select Role to Register</h2>
+    <a href="{% url 'register' %}?role=admin">Register as Admin</a><br>
+    <a href="{% url 'register' %}?role=individual">Register as Individual</a><br>
+    <a href="{% url 'register' %}?role=department">Register as department</a><br>
+    <a href="{% url 'register' %}?role=corporate">Register as Corporate</a><br>
+
+    <hr>
+    <a href="{% url 'login' %}">Already have an account? Login here</a>
+</body>
+</html>

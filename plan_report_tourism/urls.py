@@ -1,10 +1,8 @@
 from django.contrib import admin
 from django.urls import path, include
-from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('reports.urls')),  # 
-    path('login/', auth_views.LoginView.as_view(template_name='reports/login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
+    path('accounts/', include('accounts.urls')),  # 👈 point to your accounts app
+    path('plans/', include('plans.urls')),  # 👈 point to your app (adjust app name if not "plans")
 ]

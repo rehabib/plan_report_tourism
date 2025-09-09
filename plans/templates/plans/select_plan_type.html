@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Select Plan Type</h1>
+
+<form method="POST">
+    {% csrf_token %}
+    {% for level, label in allowed_levels %}
+        <label>
+            <input type="radio" name="plan_level" value="{{ level }}">
+            {{ label }}
+        </label><br>
+    {% endfor %}
+    <button type="submit">Next</button>
+</form>
+{% endblock %}
