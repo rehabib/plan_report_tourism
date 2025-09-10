@@ -1,152 +1,92 @@
 from django.shortcuts import render, redirect
+from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
-from django.urls import reverse
+from django.contrib.auth.forms import AuthenticationForm
+from django.db.models import Q
+from .models import Plan, StrategicGoal, KPI, Activity
+from .forms import PlanCreationForm
 
-# Import all plan models
-from .models import WeeklyPlan, MonthlyPlan, QuarterlyPlan, YearlyPlan
-
-# Weekly
-from .weekly_plan_forms import (
-    WeeklyPlanForm,
-    WeeklyKPIFormSet,
-    WeeklyGoalFormSet,
-    WeeklyActivityFormSet
-)
-
-# Monthly
-from .monthly_plan_form import (
-    MonthlyPlanForm,
-    KPIFormSet as MonthlyKPIFormSet,
-    StrategicGoalFormSet as MonthlyGoalFormSet,
-    ActivityFormSet as MonthlyActivityFormSet
-)
-
-# Quarterly
-from .quarterly_plan_form import (
-    QuarterlyPlanForm,
-    KPIFormSet as QuarterlyKPIFormSet,
-    StrategicGoalFormSet as QuarterlyGoalFormSet,
-    ActivityFormSet as QuarterlyActivityFormSet
-)
-
-# Yearly
-from .yearly_plan_form import (
-    YearlyPlanForm,
-    KPIFormSet as YearlyKPIFormSet,
-    StrategicGoalFormSet as YearlyGoalFormSet,
-    ActivityFormSet as YearlyActivityFormSet
-)
-
+def user_login(request):
+    """
+    Handles user login with the built-in authentication form.
+    """
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            return redirect('dashboard')
+    else:
+        form = AuthenticationForm()
+    return render(request, 'plans/login.html', {'form': form})
 
 @login_required
-def select_plan_type_view(request):
-    """User selects a plan type based on their role."""
-    role = request.user.role.lower()
-
-    allowed_levels_by_role = {
-        'individual': [('weekly', 'Weekly'), ('monthly', 'Monthly')],
-        'department': [('monthly', 'Monthly'), ('quarterly', 'Quarterly')],
-        'corporate': [('quarterly', 'Quarterly'), ('yearly', 'Yearly')],
-    }
-
-    allowed_levels = allowed_levels_by_role.get(role, [])
-
-    if request.method == 'POST':
-        selected_level = request.POST.get('plan_level')
-        return redirect(f"{reverse('create_plan')}?level={selected_level}")
-
-    return render(request, 'plans/select_plan_type.html', {
-        'allowed_levels': allowed_levels
-    })
-
+def user_logout(request):
+    """
+    Handles user logout.
+    """
+    logout(request)
+    return redirect('login')
 
 @login_required
-def create_plan_view(request):
-    """Render and save the correct plan form depending on the selected level."""
-    level = request.GET.get('level')
-    if not level:
-        return redirect('select_plan_type')
+def dashboard(request):
+    """
+    Displays the dashboard with plans based on the user's role.
+    """
+    user_role = request.user.role.lower()
+    plans = Plan.objects.none()
 
-    # Map levels to model/form/formset tuples
-    plan_mapping = {
-        'weekly': (WeeklyPlan, WeeklyPlanForm, WeeklyKPIFormSet, WeeklyGoalFormSet, WeeklyActivityFormSet),
-        'monthly': (MonthlyPlan, MonthlyPlanForm, MonthlyKPIFormSet, MonthlyGoalFormSet, MonthlyActivityFormSet),
-        'quarterly': (QuarterlyPlan, QuarterlyPlanForm, QuarterlyKPIFormSet, QuarterlyGoalFormSet, QuarterlyActivityFormSet),
-        'yearly': (YearlyPlan, YearlyPlanForm, YearlyKPIFormSet, YearlyGoalFormSet, YearlyActivityFormSet),
+    if user_role == 'corporate':
+        # Corporate users can see all plans
+        plans = Plan.objects.all().order_by('-year', '-month', '-week_number')
+    elif user_role == 'department':
+        # Department users can see their own plans and all individual plans
+        plans = Plan.objects.filter(Q(user=request.user) | Q(level='individual')).order_by('-year', '-month', '-week_number')
+    elif user_role == 'individual':
+        # Individual users can only see their own plans
+        plans = Plan.objects.filter(user=request.user).order_by('-year', '-month', '-week_number')
+
+    context = {
+        'user_role': user_role,
+        'plans': plans
     }
+    return render(request, 'plans/dashboard.html', context)
 
-    if level not in plan_mapping:
-        return redirect('select_plan_type')
-
-    PlanModel, PlanFormClass, KPIFormSetClass, GoalFormSetClass, ActivityFormSetClass = plan_mapping[level]
-
+@login_required
+def create_plan(request):
+    """
+    Handles the creation of a new plan and its related goals, KPIs, and activities.
+    """
     if request.method == 'POST':
-        plan_form = PlanFormClass(request.POST)
-        kpi_formset = KPIFormSetClass(request.POST)
-        goal_formset = GoalFormSetClass(request.POST)
-        activity_formset = ActivityFormSetClass(request.POST)
-
-        if (plan_form.is_valid() and kpi_formset.is_valid() 
-                and goal_formset.is_valid() and activity_formset.is_valid()):
-            plan = plan_form.save(commit=False)
+        form = PlanCreationForm(request.POST)
+        if form.is_valid():
+            # Create the main Plan object
+            plan = form.save(commit=False)
             plan.user = request.user
+            plan.level = request.user.role.lower() # Set the plan level based on the user's role
             plan.save()
 
-            # Attach formsets to plan instance
-            kpi_formset.instance = plan
-            kpi_formset.save()
-
-            goal_formset.instance = plan
-            goal_formset.save()
-
-            activity_formset.instance = plan
-            activity_formset.save()
-
-            return redirect('plan_list')
+            # Create related models
+            goal = StrategicGoal.objects.create(plan=plan, title=form.cleaned_data['goal_title'])
+            kpi = KPI.objects.create(
+                plan=plan,
+                name=form.cleaned_data['kpi_name'],
+                baseline=form.cleaned_data['kpi_baseline'],
+                target=form.cleaned_data['kpi_target']
+            )
+            Activity.objects.create(
+                plan=plan,
+                goal=goal,
+                major_activity=form.cleaned_data['major_activity'],
+                detail_activity=form.cleaned_data['detail_activity'],
+                responsible_person=form.cleaned_data['responsible_person'],
+                budget=form.cleaned_data['budget']
+            )
+            return redirect('dashboard')
     else:
-        plan_form = PlanFormClass()
-        kpi_formset = KPIFormSetClass(queryset=PlanModel.kpis.none())
-        goal_formset = GoalFormSetClass(queryset=PlanModel.goals.none())
-        activity_formset = ActivityFormSetClass(queryset=PlanModel.activities.none())
+        form = PlanCreationForm()
 
-    return render(request, 'plans/create_plan.html', {
-        'plan_form': plan_form,
-        'kpi_formset': kpi_formset,
-        'goal_formset': goal_formset,
-        'activity_formset': activity_formset,
-        'level': level
-    })
-
-
-@login_required
-def plan_list_view(request):
-    """List all plans for the current user based on role."""
-    role = request.user.role.lower()
-    user = request.user
-    selected_level = request.GET.get('level', None)
-
-    plans = []
-
-    if role == "corporate":
-        plans = list(WeeklyPlan.objects.all()) + list(MonthlyPlan.objects.all()) + list(QuarterlyPlan.objects.all()) + list(YearlyPlan.objects.all())
-    elif role == "department":
-        plans = list(WeeklyPlan.objects.filter(user=user)) + list(MonthlyPlan.objects.filter(user=user)) + list(QuarterlyPlan.objects.filter(user=user))
-    else:  # individual
-        plans = list(WeeklyPlan.objects.filter(user=user)) + list(MonthlyPlan.objects.filter(user=user))
-
-    # Filter by selected level
-    if selected_level:
-        level_map = {
-            'weekly': WeeklyPlan,
-            'monthly': MonthlyPlan,
-            'quarterly': QuarterlyPlan,
-            'yearly': YearlyPlan,
-        }
-        model_cls = level_map.get(selected_level)
-        plans = [p for p in plans if isinstance(p, model_cls)]
-
-    return render(request, 'plans/plan_list.html', {
-        'plans': plans,
-        'selected_level': selected_level,
-        'user_role': role,
-    })
+    context = {
+        'form': form,
+    }
+    return render(request, 'plans/create_plan.html', context)
