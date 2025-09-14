@@ -1,56 +1,208 @@
-{% extends "base.html" %}
+{% extends "plans/base.html" %}
 
 {% block content %}
-<h1>Create {{ level|title }} Plan</h1>
+<div class="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto mt-10 lg:mt-24">
+    <h1 class="text-3xl font-bold text-center text-blue-600 mb-6">Create New Plan</h1>
+    <form id="plan-form" method="post" class="space-y-6">
+        {% csrf_token %}
 
-<form method="post">
-    {% csrf_token %}
-
-    <!-- Main Plan Form -->
-    <fieldset>
-        <legend>Plan Details</legend>
-        {{ plan_form.as_p }}
-    </fieldset>
-
-    <!-- KPI Formset -->
-    <fieldset>
-        <legend>Key Performance Indicators (KPIs)</legend>
-        {{ kpi_formset.management_form }}
-        {% for form in kpi_formset %}
-            <div class="formset-form">
-                {{ form.as_p }}
+        <!-- Main Plan Form -->
+        <h2 class="text-2xl font-semibold text-gray-800 border-b pb-2 mb-4">Plan Details</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div>
+                <label for="{{ form.plan_type.id_for_label }}" class="block text-gray-700 font-semibold mb-2">Plan Type</label>
+                {{ form.plan_type }}
             </div>
-        {% empty %}
-            <p>No KPIs yet.</p>
-        {% endfor %}
-    </fieldset>
+            <div>
+                <label for="{{ form.year.id_for_label }}" class="block text-gray-700 font-semibold mb-2">Year</label>
+                {{ form.year }}
+            </div>
+            <div id="month-field" class="hidden">
+                <label for="{{ form.month.id_for_label }}" class="block text-gray-700 font-semibold mb-2">Month</label>
+                {{ form.month }}
+            </div>
+            <div id="quarter-field" class="hidden">
+                <label for="{{ form.quarter_number.id_for_label }}" class="block text-gray-700 font-semibold mb-2">Quarter</label>
+                {{ form.quarter_number }}
+            </div>
+            <div id="week-field" class="hidden">
+                <label for="{{ form.week_number.id_for_label }}" class="block text-gray-700 font-semibold mb-2">Week</label>
+                {{ form.week_number }}
+            </div>
+        </div>
 
-    <!-- Goals Formset -->
-    <fieldset>
-        <legend>Strategic Goals</legend>
+        <!-- Strategic Goals Formset -->
+        <h2 class="text-2xl font-semibold text-gray-800 border-b pb-2 mt-8 mb-4">Strategic Goals</h2>
         {{ goal_formset.management_form }}
-        {% for form in goal_formset %}
-            <div class="formset-form">
-                {{ form.as_p }}
-            </div>
-        {% empty %}
-            <p>No Goals yet.</p>
-        {% endfor %}
-    </fieldset>
+        <div id="goal-formset-container" class="space-y-4">
+            {% for goal_form in goal_formset %}
+                <div class="form-row border p-4 rounded-md bg-gray-50 flex flex-col space-y-4 relative">
+                    {{ goal_form.id }}
+                    <div>
+                        <label for="{{ goal_form.title.id_for_label }}" class="block text-gray-700 font-semibold mb-2">Goal Title</label>
+                        {{ goal_form.title }}
+                    </div>
+                    {% if goal_form.instance.pk %}
+                        <div class="absolute top-2 right-2">
+                            <label class="inline-flex items-center">
+                                {{ goal_form.DELETE }}
+                                <span class="ml-2 text-red-600">Remove</span>
+                            </label>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+        <button type="button" id="add-goal-button" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+            Add Another Strategic Goal
+        </button>
 
-    <!-- Activities Formset -->
-    <fieldset>
-        <legend>Activities</legend>
+        <!-- KPIs Formset -->
+        <h2 class="text-2xl font-semibold text-gray-800 border-b pb-2 mt-8 mb-4">Key Performance Indicators (KPIs)</h2>
+        {{ kpi_formset.management_form }}
+        <div id="kpi-formset-container" class="space-y-4">
+            {% for kpi_form in kpi_formset %}
+                <div class="form-row border p-4 rounded-md bg-gray-50 flex flex-col space-y-4 relative">
+                    {{ kpi_form.id }}
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label for="{{ kpi_form.name.id_for_label }}" class="block text-gray-700 font-semibold mb-2">KPI Name</label>
+                            {{ kpi_form.name }}
+                        </div>
+                        <div>
+                            <label for="{{ kpi_form.baseline.id_for_label }}" class="block text-gray-700 font-semibold mb-2">Baseline</label>
+                            {{ kpi_form.baseline }}
+                        </div>
+                        <div>
+                            <label for="{{ kpi_form.target.id_for_label }}" class="block text-gray-700 font-semibold mb-2">Target</label>
+                            {{ kpi_form.target }}
+                        </div>
+                    </div>
+                    {% if kpi_form.instance.pk %}
+                        <div class="absolute top-2 right-2">
+                            <label class="inline-flex items-center">
+                                {{ kpi_form.DELETE }}
+                                <span class="ml-2 text-red-600">Remove</span>
+                            </label>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+        <button type="button" id="add-kpi-button" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+            Add Another KPI
+        </button>
+
+        <!-- Activities Formset -->
+        <h2 class="text-2xl font-semibold text-gray-800 border-b pb-2 mt-8 mb-4">Activities</h2>
         {{ activity_formset.management_form }}
-        {% for form in activity_formset %}
-            <div class="formset-form">
-                {{ form.as_p }}
-            </div>
-        {% empty %}
-            <p>No Activities yet.</p>
-        {% endfor %}
-    </fieldset>
+        <div id="activity-formset-container" class="space-y-4">
+            {% for activity_form in activity_formset %}
+                <div class="form-row border p-4 rounded-md bg-gray-50 flex flex-col space-y-4 relative">
+                    {{ activity_form.id }}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="{{ activity_form.major_activity.id_for_label }}" class="block text-gray-700 font-semibold mb-2">Major Activity</label>
+                            {{ activity_form.major_activity }}
+                        </div>
+                        <div>
+                            <label for="{{ activity_form.responsible_person.id_for_label }}" class="block text-gray-700 font-semibold mb-2">Responsible Person</label>
+                            {{ activity_form.responsible_person }}
+                        </div>
+                    </div>
+                    <div>
+                        <label for="{{ activity_form.detail_activity.id_for_label }}" class="block text-gray-700 font-semibold mb-2">Detailed Steps</label>
+                        {{ activity_form.detail_activity }}
+                    </div>
+                    <div>
+                        <label for="{{ activity_form.budget.id_for_label }}" class="block text-gray-700 font-semibold mb-2">Budget</label>
+                        {{ activity_form.budget }}
+                    </div>
+                    {% if activity_form.instance.pk %}
+                        <div class="absolute top-2 right-2">
+                            <label class="inline-flex items-center">
+                                {{ activity_form.DELETE }}
+                                <span class="ml-2 text-red-600">Remove</span>
+                            </label>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+        <button type="button" id="add-activity-button" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+            Add Another Activity
+        </button>
+        
+        <div class="flex justify-center items-center mt-6 pt-6 border-t space-x-4">
+            <button type="submit" class="bg-blue-500 text-white py-3 px-12 rounded-lg font-bold hover:bg-blue-600 transition-colors shadow-md">Create Plan</button>
+            <!-- A cancel button is added here to redirect to the plans list page -->
+            <a href="{% url 'dashboard' %}" class="bg-gray-300 text-gray-800 py-3 px-12 rounded-lg font-bold hover:bg-gray-400 transition-colors shadow-md">Cancel</a>
+        </div>
+    </form>
+</div>
 
-    <button type="submit">Save Plan</button>
-</form>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Function to handle dynamic form additions
+        function addForm(containerId, totalFormsId) {
+            const container = document.getElementById(containerId);
+            const totalFormsInput = document.getElementById(totalFormsId);
+            const totalForms = parseInt(totalFormsInput.value);
+
+            const newForm = container.children[0].cloneNode(true);
+            newForm.querySelectorAll('[id]').forEach(elem => {
+                elem.id = elem.id.replace(/__prefix__/, totalForms);
+            });
+            newForm.querySelectorAll('[name]').forEach(elem => {
+                elem.name = elem.name.replace(/__prefix__/, totalForms);
+            });
+            newForm.querySelectorAll('input, textarea, select').forEach(input => {
+                if (input.type === 'checkbox') {
+                    input.checked = false;
+                } else {
+                    input.value = '';
+                }
+            });
+
+            container.appendChild(newForm);
+            totalFormsInput.value = totalForms + 1;
+        }
+
+        // Add form listeners
+        document.getElementById('add-goal-button').addEventListener('click', () => {
+            addForm('goal-formset-container', 'id_goals-TOTAL_FORMS');
+        });
+        document.getElementById('add-kpi-button').addEventListener('click', () => {
+            addForm('kpi-formset-container', 'id_kpis-TOTAL_FORMS');
+        });
+        document.getElementById('add-activity-button').addEventListener('click', () => {
+            addForm('activity-formset-container', 'id_activities-TOTAL_FORMS');
+        });
+
+        // Hide/show fields based on plan type
+        const planTypeSelect = document.getElementById('id_plan_type');
+        const monthField = document.getElementById('month-field');
+        const quarterField = document.getElementById('quarter-field');
+        const weekField = document.getElementById('week-field');
+
+        function updatePlanFields() {
+            const planType = planTypeSelect.value;
+            monthField.classList.add('hidden');
+            quarterField.classList.add('hidden');
+            weekField.classList.add('hidden');
+
+            if (planType === 'monthly') {
+                monthField.classList.remove('hidden');
+            } else if (planType === 'quarterly') {
+                quarterField.classList.remove('hidden');
+            } else if (planType === 'weekly') {
+                monthField.classList.remove('hidden');
+                weekField.classList.remove('hidden');
+            }
+        }
+
+        planTypeSelect.addEventListener('change', updatePlanFields);
+        updatePlanFields(); // Call on page load
+    });
+</script>
 {% endblock %}

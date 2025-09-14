@@ -30,10 +30,20 @@ class Plan(models.Model):
         choices=[(i, f"Week {i}") for i in range(1, 5)],
         null=True, blank=True
     )
+    MONTH_CHOICES = [
+        (1, "July"), (2, "August"), (3, "September"), (4, "October"),
+        (5, "November"), (6, "December"), (7, "January"), (8, "February"),
+        (9, "March"), (10, "April"), (11, "May"), (12, "June")
+    ]
+
     month = models.PositiveSmallIntegerField(
-        choices=[(i, f"Month {i}") for i in range(1, 13)],
-        null=True, blank=True
+        choices=MONTH_CHOICES,
+        null=True,
+        blank=True
     )
+
+
+    
     quarter_number = models.PositiveSmallIntegerField(
         choices=[(i, f"Quarter {i}") for i in range(1, 5)],
         null=True, blank=True

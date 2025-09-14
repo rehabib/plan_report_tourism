@@ -1,18 +1,61 @@
 from django import forms
+from django.forms import inlineformset_factory
 from .models import Plan, StrategicGoal, KPI, Activity
+
+class StrategicGoalForm(forms.ModelForm):
+    """
+    Form for a single StrategicGoal.
+    """
+    class Meta:
+        model = StrategicGoal
+        fields = ['title']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Enter a strategic goal'}),
+        }
+
+class KPIForm(forms.ModelForm):
+    """
+    Form for a single KPI.
+    """
+    class Meta:
+        model = KPI
+        fields = ['name', 'baseline', 'target']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Enter the KPI name'}),
+            'baseline': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Enter the baseline value'}),
+            'target': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Enter the target value'}),
+        }
+
+class ActivityForm(forms.ModelForm):
+    """
+    Form for a single Activity.
+    """
+    class Meta:
+        model = Activity
+        fields = ['major_activity', 'detail_activity', 'responsible_person', 'budget']
+        widgets = {
+            'major_activity': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'e.g., Conduct market research'}),
+            'detail_activity': forms.Textarea(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Provide detailed steps for the activity'}),
+            'responsible_person': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Name of accountable person'}),
+            'budget': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Allocated budget'}),
+        }
+
+# Create the formsets with can_delete=True
+StrategicGoalFormset = inlineformset_factory(Plan, StrategicGoal, form=StrategicGoalForm, extra=1, can_delete=True)
+KPIFormset = inlineformset_factory(Plan, KPI, form=KPIForm, extra=1, can_delete=True)
+ActivityFormset = inlineformset_factory(Plan, Activity, form=ActivityForm, extra=1, can_delete=True)
 
 class PlanCreationForm(forms.ModelForm):
     """
-    A single form to handle the creation of a Plan and its related models.
+    The main form for the Plan model, which will be used in conjunction with the formsets.
     """
-    goal_title = forms.CharField(max_length=255, required=True, widget=forms.TextInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Enter a strategic goal'}))
-    kpi_name = forms.CharField(max_length=255, required=True, widget=forms.TextInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Enter the KPI name'}))
-    kpi_baseline = forms.FloatField(required=True, widget=forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Enter the baseline value'}))
-    kpi_target = forms.FloatField(required=True, widget=forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Enter the target value'}))
-    major_activity = forms.CharField(max_length=255, required=True, widget=forms.TextInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'e.g., Conduct market research'}))
-    detail_activity = forms.CharField(widget=forms.Textarea(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Provide detailed steps for the activity'}), required=True)
-    responsible_person = forms.CharField(max_length=255, required=True, widget=forms.TextInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Name of accountable person'}))
-    budget = forms.DecimalField(max_digits=12, decimal_places=2, required=True, widget=forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Allocated budget'}))
+    # Use ChoiceField with the choices from the Plan model
+    month = forms.ChoiceField(
+        choices=[('', 'Select a Month')] + list(Plan.MONTH_CHOICES),
+        required=False,
+        label="Month",
+        widget=forms.Select(attrs={'class': 'w-full px-3 py-2 border rounded-md'})
+    )
 
     class Meta:
         model = Plan
@@ -21,7 +64,6 @@ class PlanCreationForm(forms.ModelForm):
             'plan_type': forms.Select(attrs={'class': 'w-full px-3 py-2 border rounded-md'}),
             'year': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'e.g., 2024'}),
             'week_number': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'e.g., 1-4'}),
-            'month': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'e.g., 1-12'}),
             'quarter_number': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'e.g., 1-4'}),
         }
 
@@ -32,6 +74,12 @@ class PlanCreationForm(forms.ModelForm):
         month = cleaned_data.get('month')
         quarter_number = cleaned_data.get('quarter_number')
 
+        # Set month to None if plan type is yearly
+        if plan_type == 'yearly':
+            cleaned_data['month'] = None
+            cleaned_data['week_number'] = None
+            cleaned_data['quarter_number'] = None
+
         # Add validation logic based on the plan type
         if plan_type == 'weekly' and not week_number:
             self.add_error('week_number', 'Week number is required for a weekly plan.')
@@ -39,7 +87,5 @@ class PlanCreationForm(forms.ModelForm):
             self.add_error('month', 'Month is required for a monthly plan.')
         if plan_type == 'quarterly' and not quarter_number:
             self.add_error('quarter_number', 'Quarter number is required for a quarterly plan.')
-        if plan_type == 'yearly' and (month or week_number or quarter_number):
-            raise forms.ValidationError("Yearly plans do not require a specific week, month, or quarter.")
-
+        
         return cleaned_data
