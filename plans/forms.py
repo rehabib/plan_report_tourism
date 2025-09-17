@@ -12,6 +12,10 @@ class StrategicGoalForm(forms.ModelForm):
         widgets = {
             'title': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Enter a strategic goal'}),
         }
+        
+# Set can_delete=True to automatically include the hidden fields for deletion.
+# The custom JavaScript from the previous response will handle the "Remove" button.
+StrategicGoalFormset = inlineformset_factory(Plan, StrategicGoal, form=StrategicGoalForm, extra=1, can_delete=True)
 
 class KPIForm(forms.ModelForm):
     """
@@ -25,6 +29,10 @@ class KPIForm(forms.ModelForm):
             'baseline': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Enter the baseline value'}),
             'target': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Enter the target value'}),
         }
+        
+# Set can_delete=True to automatically include the hidden fields for deletion.
+KPIFormset = inlineformset_factory(Plan, KPI, form=KPIForm, extra=1, can_delete=True)
+
 
 class ActivityForm(forms.ModelForm):
     """
@@ -40,16 +48,16 @@ class ActivityForm(forms.ModelForm):
             'budget': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Allocated budget'}),
         }
 
-# Create the formsets with can_delete=True
-StrategicGoalFormset = inlineformset_factory(Plan, StrategicGoal, form=StrategicGoalForm, extra=1, can_delete=True)
-KPIFormset = inlineformset_factory(Plan, KPI, form=KPIForm, extra=1, can_delete=True)
+# Set can_delete=True to automatically include the hidden fields for deletion.
 ActivityFormset = inlineformset_factory(Plan, Activity, form=ActivityForm, extra=1, can_delete=True)
+
 
 class PlanCreationForm(forms.ModelForm):
     """
     The main form for the Plan model, which will be used in conjunction with the formsets.
     """
     # Use ChoiceField with the choices from the Plan model
+    # The 'month' field can be an empty string, which is fine as it's not required.
     month = forms.ChoiceField(
         choices=[('', 'Select a Month')] + list(Plan.MONTH_CHOICES),
         required=False,
@@ -74,10 +82,12 @@ class PlanCreationForm(forms.ModelForm):
         month = cleaned_data.get('month')
         quarter_number = cleaned_data.get('quarter_number')
 
-        # Set month to None if plan type is yearly
-        if plan_type == 'yearly':
+        # Set specific fields to None if they are empty strings
+        if month == '':
             cleaned_data['month'] = None
+        if week_number == '':
             cleaned_data['week_number'] = None
+        if quarter_number == '':
             cleaned_data['quarter_number'] = None
 
         # Add validation logic based on the plan type

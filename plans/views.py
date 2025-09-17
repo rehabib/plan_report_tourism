@@ -4,6 +4,7 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.db.models import Q
+from django.http import Http404 # Import Http404 to manually raise the error
 from .models import Plan, StrategicGoal, KPI, Activity
 from .forms import PlanCreationForm, StrategicGoalFormset, KPIFormset, ActivityFormset
 from accounts.models import User
@@ -87,6 +88,7 @@ def dashboard(request):
     }
     return render(request, 'plans/dashboard.html', context)
 
+
 @login_required
 def create_plan(request):
     """
@@ -115,7 +117,8 @@ def create_plan(request):
             activity_formset.instance = plan
             activity_formset.save()
 
-            return redirect('dashboard')
+            # Corrected line: Redirect to the plan_success view, passing the new plan's ID
+            return redirect('plan_success', plan_id=plan.id)
     else:
         form = PlanCreationForm()
         goal_formset = StrategicGoalFormset(prefix='goals')
@@ -130,12 +133,16 @@ def create_plan(request):
     }
     return render(request, 'plans/create_plan.html', context)
 
+
 @login_required
 def edit_plan(request, plan_id):
     """
     Handles the editing of an existing plan and its related goals, KPIs, and activities.
     """
-    plan = get_object_or_404(Plan, id=plan_id, user=request.user)
+    plan = get_object_or_404(Plan, id=plan_id)
+    # Check if the user has permission to edit this plan
+    if plan.user != request.user:
+        raise Http404("You do not have permission to edit this plan.")
 
     if request.method == 'POST':
         form = PlanCreationForm(request.POST, instance=plan)
@@ -147,8 +154,8 @@ def edit_plan(request, plan_id):
             # Save the main Plan object
             plan = form.save()
 
-            # Save the formsets. This will automatically update existing objects
-            # and delete those marked with the DELETE checkbox.
+            # The formset.save() method automatically handles creating new objects,
+            # updating existing ones, and deleting those marked with the DELETE checkbox.
             goal_formset.save()
             kpi_formset.save()
             activity_formset.save()
@@ -167,3 +174,70 @@ def edit_plan(request, plan_id):
         'activity_formset': activity_formset,
     }
     return render(request, 'plans/create_plan.html', context)
+
+
+@login_required
+def plan_success(request, plan_id):
+    """
+    Renders the success page after a plan is created.
+    """
+    return render(request, 'plans/plan_success.html', {'plan_id': plan_id})
+    
+
+@login_required
+def view_plan(request, plan_id):
+    """
+    Displays the details of a specific plan with proper access control based on user role.
+    """
+    # First, get the plan regardless of the user
+    plan = get_object_or_404(Plan, id=plan_id)
+    
+    # Now, implement access control logic
+    user_role = request.user.role.lower()
+    can_view = False
+
+    # A corporate user can view any plan
+    if user_role == 'corporate':
+        can_view = True
+    # A department user can view plans within their department or their own plans
+    elif user_role == 'department':
+        if plan.user.department == request.user.department:
+            can_view = True
+    # An individual user can only view their own plans
+    elif plan.user == request.user:
+        can_view = True
+    
+    # If the user doesn't have permission, raise a 404 error
+    if not can_view:
+        raise Http404("You do not have permission to view this plan.")
+
+    goals = StrategicGoal.objects.filter(plan=plan)
+    kpis = KPI.objects.filter(plan=plan)
+    activities = Activity.objects.filter(plan=plan)
+    
+    context = {
+        'plan': plan,
+        'goals': goals,
+        'kpis': kpis,
+        'activities': activities,
+    }
+    return render(request, 'plans/view_plan.html', context)
+    
+
+@login_required
+def delete_plan(request, plan_id):
+    """
+    Deletes a specific plan based on its ID.
+    The view only processes POST requests for security reasons.
+    """
+    plan_to_delete = get_object_or_404(Plan, pk=plan_id)
+    
+    # Check if the request method is POST.
+    if request.method == 'POST':
+        plan_to_delete.delete()
+        # Redirect the user back to the dashboard or a success page.
+        return redirect('dashboard') 
+
+    # If it's a GET request, you could show a confirmation page.
+    # For now, we'll just redirect to avoid showing an empty page.
+    return redirect('dashboard')

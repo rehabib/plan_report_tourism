@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan Created Successfully</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+body {
+font-family: 'Inter', sans-serif;
+}
+</style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+<div class="bg-white p-8 rounded-lg shadow-xl max-w-lg w-full text-center">
+<div class="flex items-center justify-center mb-4">
+<svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+</svg>
+</div>
+<h1 class="text-3xl font-bold text-gray-800 mb-2">Plan Created!</h1>
+<p class="text-gray-600 mb-6">Your plan has been saved successfully. What would you like to do next?</p>
+
+    <div class="flex flex-col sm:flex-row justify-center gap-4">
+        <!-- Corrected URL tag from 'pk=plan_id' to 'plan_id=plan_id' -->
+        <a href="{% url 'view_plan' plan_id=plan_id %}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-full transition duration-300 ease-in-out transform hover:scale-105 shadow-lg">
+            View Plan
+        </a>
+        <a href="{% url 'dashboard' %}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-3 px-6 rounded-full transition duration-300 ease-in-out transform hover:scale-105 shadow-lg">
+            Go to Dashboard
+        </a>
+    </div>
+</div>
+
+</body>
+</html>
