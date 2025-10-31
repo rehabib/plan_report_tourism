@@ -84,9 +84,17 @@ class KPI(models.Model):
     """
     plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name="kpis", null=True, blank=True)
     name = models.CharField(max_length=255)
+    #
+    measurement = models.CharField(max_length=255, help_text="e.g., Percentage, Count", null=True, blank=True) 
+    weight =models.DecimalField(max_digits=5,null=True, blank=True, decimal_places=2)
     baseline = models.FloatField()
     target = models.FloatField()
-
+    
+    #New fields for Quaterly and Yearly Plans
+    target_q1 = models.FloatField(default=0.0)
+    target_q2 = models.FloatField(default=0.0)
+    target_q3 = models.FloatField(default=0.0)
+    target_q4 = models.FloatField(default=0.0)
     def __str__(self):
         return self.name
 

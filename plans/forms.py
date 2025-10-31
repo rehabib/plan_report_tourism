@@ -23,13 +23,64 @@ class KPIForm(forms.ModelForm):
     """
     class Meta:
         model = KPI
-        fields = ['name', 'baseline', 'target']
+        fields = ['name', 'measurement','weight','baseline', 'target','target_q1','target_q2','target_q3','target_q4']
+
         widgets = {
             'name': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Enter the KPI name'}),
+            'measurement': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'e.g., Percentage, Count'}),
+            'weight': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Enter the weight'}),
             'baseline': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Enter the baseline value'}),
             'target': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Enter the target value'}),
+            'target_q1': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Enter Q1 target value'}),
+            'target_q2': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Enter Q2 target value'}),
+            'target_q3': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Enter Q3 target value'}),
+            'target_q4': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Enter Q4 target value'}),
         }
         
+    def __init__(self, *args, **kwargs):
+        self.plan_type = kwargs.pop('plan_type', 'yearly') 
+        super().__init__(*args, **kwargs)
+        
+        for q_field in ['target_q1', 'target_q2', 'target_q3', 'target_q4']:
+            self.fields[q_field].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        if self.plan_type == 'yearly':
+            q_fields = ['target_q1', 'target_q2', 'target_q3', 'target_q4']
+            q_values = [cleaned_data.get(f) for f in q_fields]
+            yearly_target = cleaned_data.get('target')
+            
+            # --- Check 1: Ensure all quarterly targets are provided ---
+            if any(q is None for q in q_values):
+                if self.has_changed() or self.instance.pk:
+                    for field_name in q_fields:
+                        if cleaned_data.get(field_name) is None:
+                            self.add_error(field_name, "Required for a Yearly Plan.")
+                    
+                    # Re-collect cleaned data to check the next rules
+                    q_values = [cleaned_data.get(f) for f in q_fields]
+
+            # --- Check 2: Progressive Target Validation (Q1 <= Q2 <= Q3 <= Q4) ---
+            if all(q is not None for q in q_values):
+                if not (q_values[0] <= q_values[1] <= q_values[2] <= q_values[3]):
+                    raise forms.ValidationError(
+                        "Quarterly targets must be progressive (non-decreasing): Q1 ≤ Q2 ≤ Q3 ≤ Q4."
+                    )
+            
+                # --- Check 3: Total Target must equal Q4 Target ---
+                q4_target = q_values[3]
+                
+                if yearly_target is None:
+                    self.add_error('target', "Total target is required for a Yearly Plan.")
+                
+                elif abs(yearly_target - q4_target) > 0.001: 
+                     self.add_error('target', 
+                        f"Target Mismatch: The Total Target ({yearly_target}) must exactly equal the Q4 Target ({q4_target}) for progressive metrics."
+                     )
+
+        return cleaned_data     
 # Set can_delete=True to automatically include the hidden fields for deletion.
 KPIFormset = inlineformset_factory(Plan, KPI, form=KPIForm, extra=1, can_delete=True)
 

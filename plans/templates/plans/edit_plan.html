@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Plan: {{ plan_instance.id }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 md:p-8">
+    <div class="bg-white p-6 rounded-xl shadow-2xl max-w-4xl mx-auto">
+
+        <h1 class="text-3xl font-extrabold text-indigo-700 mb-6 border-b pb-2">
+            Edit Annual Plan #{{ plan_instance.id }} ({{ plan_instance.get_plan_type_display }})
+        </h1>
+
+        <form method="post" id="plan-form" action="{% url 'edit_plan' plan_instance.id %}">
+            {% csrf_token %}
+            
+            <!-- Hidden Input for Delete Check (Used by JS) -->
+            <input type="hidden" name="delete_pks" id="delete_pks" value="">
+
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4 mt-6">1. Plan Details</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                {{ form.as_p }}
+            </div>
+
+            <!-- Strategic Goals Formset -->
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4 mt-6 flex justify-between items-center">
+                2. Strategic Goals
+                <button type="button" id="add-goal-btn" class="bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 transition duration-150 shadow-md">
+                    + Add Goal
+                </button>
+            </h2>
+            
+            {{ goal_formset.management_form }}
+            <div id="goals-container" class="space-y-4 mb-8">
+                {% for goal_form in goal_formset %}
+                    <div class="goal-form p-4 border rounded-lg bg-gray-50 shadow-sm" data-form-index="{{ forloop.counter0 }}">
+                        <h4 class="font-medium text-lg text-gray-700 mb-2">Goal #{{ forloop.counter }}</h4>
+                        {{ goal_form.id }}
+                        {{ goal_form.DELETE }}
+                        <div class="flex items-center space-x-4">
+                            <div class="flex-grow">
+                                {{ goal_form.title.label_tag }}
+                                {{ goal_form.title }}
+                            </div>
+                            <button type="button" class="remove-form-btn bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition duration-150 self-end" data-form-type="goal">
+                                Remove
+                            </button>
+                        </div>
+                        {% if goal_form.errors %}{{ goal_form.errors }}{% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- KPIs Formset -->
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4 mt-6 flex justify-between items-center">
+                3. Key Performance Indicators (KPIs)
+                <button type="button" id="add-kpi-btn" class="bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 transition duration-150 shadow-md">
+                    + Add KPI
+                </button>
+            </h2>
+            
+            {{ kpi_formset.management_form }}
+            <div id="kpis-container" class="space-y-4 mb-8">
+                {% for kpi_form in kpi_formset %}
+                    <div class="kpi-form p-4 border rounded-lg bg-gray-50 shadow-sm" data-form-index="{{ forloop.counter0 }}">
+                        <h4 class="font-medium text-lg text-gray-700 mb-2">KPI #{{ forloop.counter }}</h4>
+                        {{ kpi_form.id }}
+                        {{ kpi_form.DELETE }}
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>{{ kpi_form.name.label_tag }}{{ kpi_form.name }}</div>
+                            <div>{{ kpi_form.baseline.label_tag }}{{ kpi_form.baseline }}</div>
+                            <div>{{ kpi_form.target.label_tag }}{{ kpi_form.target }}</div>
+                        </div>
+                        <button type="button" class="remove-form-btn bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition duration-150 mt-4" data-form-type="kpi">
+                            Remove
+                        </button>
+                        {% if kpi_form.errors %}{{ kpi_form.errors }}{% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Activities Formset -->
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4 mt-6 flex justify-between items-center">
+                4. Activities
+                <button type="button" id="add-activity-btn" class="bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 transition duration-150 shadow-md">
+                    + Add Activity
+                </button>
+            </h2>
+            
+            {{ activity_formset.management_form }}
+            <div id="activities-container" class="space-y-4 mb-8">
+                {% for activity_form in activity_formset %}
+                    <div class="activity-form p-4 border rounded-lg bg-gray-50 shadow-sm" data-form-index="{{ forloop.counter0 }}">
+                        <h4 class="font-medium text-lg text-gray-700 mb-2">Activity #{{ forloop.counter }}</h4>
+                        {{ activity_form.id }}
+                        {{ activity_form.DELETE }}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>{{ activity_form.major_activity.label_tag }}{{ activity_form.major_activity }}</div>
+                            <div>{{ activity_form.responsible_person.label_tag }}{{ activity_form.responsible_person }}</div>
+                            <div class="md:col-span-2">{{ activity_form.detail_activity.label_tag }}{{ activity_form.detail_activity }}</div>
+                            <div>{{ activity_form.budget.label_tag }}{{ activity_form.budget }}</div>
+                        </div>
+                        <button type="button" class="remove-form-btn bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition duration-150 mt-4" data-form-type="activity">
+                            Remove
+                        </button>
+                        {% if activity_form.errors %}{{ activity_form.errors }}{% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Submission Button -->
+            <div class="mt-8 pt-4 border-t flex justify-end">
+                <button type="submit" class="bg-green-600 text-white text-xl font-bold px-8 py-3 rounded-xl hover:bg-green-700 transition duration-150 shadow-lg">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Empty Forms for JavaScript Cloning -->
+<template id="empty-goal-form">
+    <div class="goal-form p-4 border rounded-lg bg-gray-50 shadow-sm" data-form-index="__prefix__">
+        <h4 class="font-medium text-lg text-gray-700 mb-2">Goal #<span class="goal-number"></span></h4>
+        {{ goal_formset.empty_form.id }}
+        {{ goal_formset.empty_form.DELETE }}
+        <div class="flex items-center space-x-4">
+            <div class="flex-grow">
+                {{ goal_formset.empty_form.title.label_tag }}
+                {{ goal_formset.empty_form.title }}
+            </div>
+            <button type="button" class="remove-form-btn bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition duration-150 self-end" data-form-type="goal">
+                Remove
+            </button>
+        </div>
+    </div>
+</template>
+
+<template id="empty-kpi-form">
+    <div class="kpi-form p-4 border rounded-lg bg-gray-50 shadow-sm" data-form-index="__prefix__">
+        <h4 class="font-medium text-lg text-gray-700 mb-2">KPI #<span class="kpi-number"></span></h4>
+        {{ kpi_formset.empty_form.id }}
+        {{ kpi_formset.empty_form.DELETE }}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>{{ kpi_formset.empty_form.name.label_tag }}{{ kpi_formset.empty_form.name }}</div>
+            <div>{{ kpi_formset.empty_form.baseline.label_tag }}{{ kpi_formset.empty_form.baseline }}</div>
+            <div>{{ kpi_formset.empty_form.target.label_tag }}{{ kpi_formset.empty_form.target }}</div>
+        </div>
+        <button type="button" class="remove-form-btn bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition duration-150 mt-4" data-form-type="kpi">
+            Remove
+        </button>
+    </div>
+</template>
+
+<template id="empty-activity-form">
+    <div class="activity-form p-4 border rounded-lg bg-gray-50 shadow-sm" data-form-index="__prefix__">
+        <h4 class="font-medium text-lg text-gray-700 mb-2">Activity #<span class="activity-number"></span></h4>
+        {{ activity_formset.empty_form.id }}
+        {{ activity_formset.empty_form.DELETE }}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>{{ activity_formset.empty_form.major_activity.label_tag }}{{ activity_formset.empty_form.major_activity }}</div>
+            <div>{{ activity_formset.empty_form.responsible_person.label_tag }}{{ activity_formset.empty_form.responsible_person }}</div>
+            <div class="md:col-span-2">{{ activity_formset.empty_form.detail_activity.label_tag }}{{ activity_formset.empty_form.detail_activity }}</div>
+            <div>{{ activity_formset.empty_form.budget.label_tag }}{{ activity_formset.empty_form.budget }}</div>
+        </div>
+        <button type="button" class="remove-form-btn bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition duration-150 mt-4" data-form-type="activity">
+            Remove
+        </button>
+    </div>
+</template>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Formset Manager for dynamic addition and removal
+        function FormsetManager(containerId, addBtnId, emptyFormTemplateId, prefix, formClass) {
+            const container = document.getElementById(containerId);
+            const addButton = document.getElementById(addBtnId);
+            const template = document.getElementById(emptyFormTemplateId);
+            const totalFormsInput = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
+            const initialFormsInput = document.getElementById(`id_${prefix}-INITIAL_FORMS`);
+            const formCountSpan = container.querySelector(`.${formClass}-number`); // Used for numbering logic
+
+            // Renumber all forms on load or after removal/addition
+            function renumberForms() {
+                const forms = container.querySelectorAll(`.${formClass}`);
+                forms.forEach((form, index) => {
+                    form.setAttribute('data-form-index', index);
+                    
+                    // Update field names and IDs
+                    form.querySelectorAll('[name]').forEach(input => {
+                        const newName = input.name.replace(/-(\d+)-/g, `-${index}-`);
+                        input.name = newName;
+                        if (input.id) {
+                            input.id = input.id.replace(/-(\d+)-/g, `-${index}-`);
+                        }
+                    });
+
+                    // Update field labels
+                    form.querySelectorAll('label').forEach(label => {
+                        const currentFor = label.getAttribute('for');
+                        if (currentFor) {
+                            label.setAttribute('for', currentFor.replace(/-(\d+)-/g, `-${index}-`));
+                        }
+                    });
+
+                    // Update display number (Goal #1, KPI #2, etc.)
+                    const numberSpan = form.querySelector(`.${formClass}-number`);
+                    if (numberSpan) {
+                        numberSpan.textContent = index + 1;
+                    }
+
+                    // Update form header for goals
+                    const formHeader = form.querySelector('h4');
+                    if (formHeader) {
+                        formHeader.textContent = formHeader.textContent.replace(/#\d+/, `#${index + 1}`);
+                    }
+                });
+                totalFormsInput.value = forms.length;
+            }
+            
+            // Initial renumbering
+            renumberForms();
+
+            // Add Form Logic
+            addButton.addEventListener('click', function() {
+                const currentCount = parseInt(totalFormsInput.value);
+                const newFormHtml = template.innerHTML.replace(new RegExp('__prefix__', 'g'), currentCount);
+                
+                const newFormDiv = document.createElement('div');
+                newFormDiv.innerHTML = newFormHtml.trim();
+                const newForm = newFormDiv.firstChild;
+                container.appendChild(newForm);
+
+                // Set initial values for new forms to empty
+                newForm.querySelectorAll('input, textarea, select').forEach(input => {
+                    if (input.type !== 'hidden' && input.type !== 'checkbox') {
+                        input.value = '';
+                    } else if (input.type === 'checkbox') {
+                        input.checked = false;
+                    }
+                });
+
+                // Increment total forms count
+                totalFormsInput.value = currentCount + 1;
+                renumberForms();
+            });
+
+            // Remove Form Logic
+            container.addEventListener('click', function(e) {
+                if (e.target.classList.contains('remove-form-btn') && e.target.getAttribute('data-form-type') === formClass) {
+                    const form = e.target.closest(`.${formClass}`);
+                    if (!form) return;
+
+                    // Find the hidden ID field
+                    const idInput = form.querySelector('[name$="-id"]');
+                    const deleteInput = form.querySelector('[name$="-DELETE"]');
+
+                    if (idInput && idInput.value) {
+                        // Existing object: Check the hidden DELETE checkbox to mark for deletion
+                        if (deleteInput) {
+                            deleteInput.checked = true;
+                        }
+                        // Visually hide the form instead of removing it to retain the inputs for submission
+                        form.style.display = 'none';
+                    } else {
+                        // New/extra form: Just remove it from the DOM
+                        form.remove();
+                    }
+                    
+                    // The total forms count must remain the same for existing forms marked for deletion.
+                    // We only update TOTAL_FORMS if we remove a new, non-saved form.
+                    if (!idInput || !idInput.value) {
+                        totalFormsInput.value = parseInt(totalFormsInput.value) - 1;
+                    }
+
+                    // Renumber the visible forms
+                    renumberForms();
+                }
+            });
+        }
+        
+        // Initialize Formset Managers
+        new FormsetManager('goals-container', 'add-goal-btn', 'empty-goal-form', 'goals', 'goal-form');
+        new FormsetManager('kpis-container', 'add-kpi-btn', 'empty-kpi-form', 'kpis', 'kpi-form');
+        new FormsetManager('activities-container', 'add-activity-btn', 'empty-activity-form', 'activities', 'activity-form');
+    });
+</script>
+{% endblock %}
