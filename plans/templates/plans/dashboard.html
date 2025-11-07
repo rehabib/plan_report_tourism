@@ -17,8 +17,8 @@
                         All Departments
                     </option>
                     {% for department in all_departments %}
-                    <option value="{% url 'dashboard' %}?department={{ department }}" {% if
-                        department==selected_department %}selected{% endif %}>
+                    <!-- FINAL FIX: Added crucial spaces around the '==' operator -->
+                    <option value="{% url 'dashboard' %}?department={{ department }}" {% if department == selected_department %}selected{% endif %}>
                         {{ department|capfirst }}
                     </option>
                     {% endfor %}
@@ -54,6 +54,7 @@
             <table class="w-full text-sm text-left text-gray-500">
                 <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                     <tr>
+                        <th scope="col" class="px-6 py-3">Plan Status</th>
                         <th scope="col" class="px-6 py-3">Plan Level</th>
                         <th scope="col" class="px-6 py-3">Plan Type</th>
                         <th scope="col" class="px-6 py-3">Year</th>
@@ -65,20 +66,35 @@
                 <tbody>
                     {% for plan in plans %}
                     <tr class="bg-white border-b hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                            <span class="font-semibold px-2 py-1 rounded-full text-xs 
+                                {% if plan.status == 'APPROVED' %}bg-green-100 text-green-800
+                                {% elif plan.status == 'REJECTED' %}bg-red-100 text-red-800
+                                {% else %}bg-yellow-100 text-yellow-800
+                                {% endif %}">
+                                {{ plan.get_status_display }}
+                            </span>
+                        </td>
                         <td class="px-6 py-4">{{ plan.get_level_display }}</td>
                         <td class="px-6 py-4">{{ plan.get_plan_type_display }}</td>
                         <td class="px-6 py-4">{{ plan.year }}</td>
                         <td class="px-6 py-4">
-                            {% if plan.plan_type == 'monthly' %}{{ plan.get_month_display }}{% endif %}
-                            {% if plan.plan_type == 'quarterly' %}Q{{ plan.quarter_number }}{% endif %}
-                            {% if plan.plan_type == 'weekly' %}Wk {{ plan.week_number }} ({{
-                            plan.get_month_display|slice:":3" }}){% endif %}
+                            <!-- Corrected logic for period display -->
+                            {% if plan.plan_type == 'monthly' %}
+                                {{ plan.get_month_display }}
+                            {% elif plan.plan_type == 'quarterly' %}
+                                Q{{ plan.quarter_number }}
+                            {% elif plan.plan_type == 'weekly' %}
+                                Wk {{ plan.week_number }} ({{ plan.get_month_display|slice:":3" }})
+                            {% else %}
+                                N/A
+                            {% endif %}
                         </td>
                         <td class="px-6 py-4">{{ plan.user.username }}</td>
                         <td class="px-6 py-4 text-right space-x-2">
                             <a href="{% url 'view_plan' plan.pk %}"
                                 class="font-medium text-blue-600 hover:underline">View</a>
-                            {% if user.is_authenticated and plan.user == request.user %}
+                            {% if user.is_authenticated and plan.user == request.user and plan.status != 'APPROVED' %}
                             <a href="{% url 'edit_plan' plan.pk %}"
                                 class="font-medium text-green-600 hover:underline">Edit</a>
                             <!-- Use a data attribute to store the form action URL -->
@@ -118,29 +134,43 @@
         const confirmButton = document.getElementById('confirm-delete');
         let deleteUrl = null;
 
+        // NEW HELPER FUNCTION to get the CSRF token from the cookie
+        function getCsrfToken() {
+            const name = 'csrftoken';
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    let cookie = cookies[i].trim();
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        return cookieValue;
+                    }
+                }
+            }
+            return null;
+        }
+
+
         // Function to create a temporary form and submit it for deletion
         function submitDeleteForm(url) {
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = url;
 
-            // Django requires a CSRF token for POST requests
+            // Get the token using the helper function
+            const csrfToken = getCsrfToken();
+            if (!csrfToken) {
+                console.error("CSRF token not found. Deletion will fail.");
+                return;
+            }
+
+            // Append the CSRF token input
             const csrfInput = document.createElement('input');
             csrfInput.type = 'hidden';
             csrfInput.name = 'csrfmiddlewaretoken';
-            // Assuming your Django templates expose the CSRF token globally or it's accessible via cookie/hidden input
-            // For a robust solution, you would need to retrieve the token, but for this context, 
-            // we rely on the hidden input generated by {% csrf_token %} elsewhere in the page.
-
-            // Safest way is to find the token in the dashboard.html itself.
-            const existingCsrf = document.querySelector('input[name="csrfmiddlewaretoken"]');
-            if (existingCsrf) {
-                csrfInput.value = existingCsrf.value;
-                form.appendChild(csrfInput);
-            } else {
-                console.error("CSRF token not found. Deletion may fail.");
-                return;
-            }
+            csrfInput.value = csrfToken;
+            form.appendChild(csrfInput);
 
             document.body.appendChild(form);
             form.submit();

@@ -93,79 +93,128 @@
 
         <!-- Key Performance Indicators (KPIs) Formset -->
         <div class="p-6 rounded-xl bg-gray-50 border border-gray-200">
-            <h2 class="text-2xl font-semibold text-gray-800 border-b pb-2 mt-2 mb-4">Key Performance Indicators (KPIs)</h2>
-            {{ kpi_formset.management_form }}
-            <div id="kpi-formset-container" class="space-y-4" data-form-type="kpi" data-prefix="{{ kpi_formset.prefix }}">
-                {% for kpi_form in kpi_formset %}
-                    <div class="form-row border p-4 rounded-md bg-gray-100 flex flex-col space-y-4 relative transition-all duration-300 ease-in-out {% if kpi_form.instance.pk and kpi_form.DELETE.value %}deleted-form{% endif %}">
-                        
-                        <!-- UNIFIED REMOVAL BUTTON -->
-                        <div class="absolute top-2 right-2">
-                            {% if kpi_form.DELETE %}{{ kpi_form.DELETE }}{% endif %}
-                            <button type="button" class="plan-form-remove-btn p-1 text-red-500 hover:text-red-700 transition-colors"
-                                    title="Remove this item">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
+    <h2 class="text-2xl font-semibold text-gray-800 border-b pb-2 mt-2 mb-4">Key Performance Indicators (KPIs)</h2>
+    {{ kpi_formset.management_form }}
+    <div id="kpi-formset-container" class="space-y-4" data-form-type="kpi" data-prefix="{{ kpi_formset.prefix }}">
+        {% for kpi_form in kpi_formset %}
+            <div class="form-row border p-4 rounded-md bg-gray-100 flex flex-col space-y-4 relative transition-all duration-300 ease-in-out {% if kpi_form.instance.pk and kpi_form.DELETE.value %}deleted-form{% endif %}">
+                
+                <div class="absolute top-2 right-2">
+                    {% if kpi_form.DELETE %}{{ kpi_form.DELETE }}{% endif %}
+                    <button type="button" class="plan-form-remove-btn p-1 text-red-500 hover:text-red-700 transition-colors"
+                            title="Remove this item">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
 
-                        {{ kpi_form.id }}
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label for="{{ kpi_form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">KPI Name</label>
-                                {{ kpi_form.name }}
-                            </div>
-                            <div>
-                                <label for="{{ kpi_form.baseline.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Baseline</label>
-                                {{ kpi_form.baseline }}
-                            </div>
-                            <div>
-                                <label for="{{ kpi_form.target.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Target</label>
-                                {{ kpi_form.target }}
-                            </div>
-                        </div>
+                {{ kpi_form.id }}
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label for="{{ kpi_form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">KPI Name</label>
+                        {{ kpi_form.name }}
                     </div>
-                {% endfor %}
-            </div>
-            
-            <!-- HIDDEN TEMPLATE FOR NEW KPI FORMS (Uses __prefix__) -->
-            <div id="empty-form-kpi" class="hidden">
-                <div class="form-row border p-4 rounded-md bg-gray-100 flex flex-col space-y-4 relative transition-all duration-300 ease-in-out">
-                    <!-- UNIFIED REMOVAL BUTTON -->
-                    <div class="absolute top-2 right-2">
-                        {{ kpi_formset.empty_form.DELETE }}
-                        <button type="button" class="plan-form-remove-btn p-1 text-red-500 hover:text-red-700 transition-colors" title="Remove this item">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                    <div>
+                        <label for="{{ kpi_form.measurement.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Measurement</label>
+                        {{ kpi_form.measurement }}
                     </div>
+                    <div>
+                        <label for="{{ kpi_form.weight.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Weight</label>
+                        {{ kpi_form.weight }}
+                    </div>
+                    <div>
+                        <label for="{{ kpi_form.baseline.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Baseline</label>
+                        {{ kpi_form.baseline }}
+                    </div>
+                </div>
 
-                    {{ kpi_formset.empty_form.id }}
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label for="{{ kpi_formset.empty_form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">KPI Name</label>
-                            {{ kpi_formset.empty_form.name }}
-                        </div>
-                        <div>
-                            <label for="{{ kpi_formset.empty_form.baseline.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Baseline</label>
-                            {{ kpi_formset.empty_form.baseline }}
-                        </div>
-                        <div>
-                            <label for="{{ kpi_formset.empty_form.target.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Target</label>
-                            {{ kpi_formset.empty_form.target }}
-                        </div>
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <div>
+                        <label for="{{ kpi_form.target.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Annual Target</label>
+                        {{ kpi_form.target }}
+                    </div>
+                    <div class="quarterly-target-field">
+                        <label for="{{ kpi_form.target_q1.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q1 Target</label>
+                        {{ kpi_form.target_q1 }}
+                    </div>
+                    <div class="quarterly-target-field">
+                        <label for="{{ kpi_form.target_q2.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q2 Target</label>
+                        {{ kpi_form.target_q2 }}
+                    </div>
+                    <div class="quarterly-target-field">
+                        <label for="{{ kpi_form.target_q3.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q3 Target</label>
+                        {{ kpi_form.target_q3 }}
+                    </div>
+                    <div class="quarterly-target-field">
+                        <label for="{{ kpi_form.target_q4.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q4 Target</label>
+                        {{ kpi_form.target_q4 }}
                     </div>
                 </div>
             </div>
-            <!-- End Hidden Template -->
+        {% endfor %}
+    </div>
+    
+    <div id="empty-form-kpi" class="hidden">
+        <div class="form-row border p-4 rounded-md bg-gray-100 flex flex-col space-y-4 relative transition-all duration-300 ease-in-out">
+            <div class="absolute top-2 right-2">
+                {{ kpi_formset.empty_form.DELETE }}
+                <button type="button" class="plan-form-remove-btn p-1 text-red-500 hover:text-red-700 transition-colors" title="Remove this item">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
 
-            <button type="button" id="add-kpi-button" class="mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shadow-md">
-                Add Another KPI
-            </button>
+            {{ kpi_formset.empty_form.id }}
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label for="{{ kpi_formset.empty_form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">KPI Name</label>
+                    {{ kpi_formset.empty_form.name }}
+                </div>
+                <div>
+                    <label for="{{ kpi_formset.empty_form.measurement.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Measurement</label>
+                    {{ kpi_formset.empty_form.measurement }}
+                </div>
+                <div>
+                    <label for="{{ kpi_formset.empty_form.weight.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Weight</label>
+                    {{ kpi_formset.empty_form.weight }}
+                </div>
+                <div>
+                    <label for="{{ kpi_formset.empty_form.baseline.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Baseline</label>
+                    {{ kpi_formset.empty_form.baseline }}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div>
+                    <label for="{{ kpi_formset.empty_form.target.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Annual Target</label>
+                    {{ kpi_formset.empty_form.target }}
+                </div>
+                <div class="quarterly-target-field">
+                    <label for="{{ kpi_formset.empty_form.target_q1.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q1 Target</label>
+                    {{ kpi_formset.empty_form.target_q1 }}
+                </div>
+                <div class="quarterly-target-field">
+                    <label for="{{ kpi_formset.empty_form.target_q2.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q2 Target</label>
+                    {{ kpi_formset.empty_form.target_q2 }}
+                </div>
+                <div class="quarterly-target-field">
+                    <label for="{{ kpi_formset.empty_form.target_q3.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q3 Target</label>
+                    {{ kpi_formset.empty_form.target_q3 }}
+                </div>
+                <div class="quarterly-target-field">
+                    <label for="{{ kpi_formset.empty_form.target_q4.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q4 Target</label>
+                    {{ kpi_formset.empty_form.target_q4 }}
+                </div>
+            </div>
         </div>
-
+    </div>
+    <button type="button" id="add-kpi-button" class="mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shadow-md">
+        Add Another KPI
+    </button>
+</div>
         <!-- Activities Formset -->
         <div class="p-6 rounded-xl bg-gray-50 border border-gray-200">
             <h2 class="text-2xl font-semibold text-gray-800 border-b pb-2 mt-2 mb-4">Activities</h2>
@@ -400,29 +449,60 @@
         });
 
         // 3. Plan Type conditional visibility
-        const planTypeSelect = document.getElementById('id_plan_type');
-        const monthField = document.getElementById('month-field');
-        const quarterField = document.getElementById('quarter-field');
-        const weekField = document.getElementById('week-field');
+       // ... existing JS before updatePlanFields ...
 
-        function updatePlanFields() {
-            const planType = planTypeSelect.value;
-            // Hide all first
-            [monthField, quarterField, weekField].forEach(f => f.classList.add('hidden'));
+// 3. Plan Type conditional visibility
+const planTypeSelect = document.getElementById('id_plan_type');
+const monthField = document.getElementById('month-field');
+const quarterField = document.getElementById('quarter-field');
+const weekField = document.getElementById('week-field');
 
-            // Show relevant fields
-            if (planType === 'monthly') {
-                monthField.classList.remove('hidden');
-            } else if (planType === 'quarterly') {
-                quarterField.classList.remove('hidden');
-            } else if (planType === 'weekly') {
-                monthField.classList.remove('hidden'); // Weeks often depend on the month
-                weekField.classList.remove('hidden');
-            }
+function updateKpiQuarterlyFields() {
+    const planType = planTypeSelect.value;
+    const isYearly = planType === 'yearly';
+    
+    // Select all form rows (existing and newly added) and the empty form template fields
+    const quarterlyFields = document.querySelectorAll('.quarterly-target-field');
+
+    quarterlyFields.forEach(field => {
+        field.classList.toggle('hidden', !isYearly);
+        
+        // IMPORTANT: If not yearly, clear the values to prevent unwanted data submission
+        // when the form is hidden (the view handles the clearing before save, but this improves UX/form validity)
+        const input = field.querySelector('input');
+        if (input && !isYearly) {
+             // You may want to clear the value here, but since the view handles clearing
+             // the cleaned_data before save, hiding is often sufficient for the client-side.
+             // If Django client-side validation were used, you'd need to clear it or disable it.
+             // Given your current setup, just hiding is enough.
         }
+    });
+}
 
-        planTypeSelect.addEventListener('change', updatePlanFields);
-        updatePlanFields(); // Call on page load
+
+function updatePlanFields() {
+    const planType = planTypeSelect.value;
+    // Hide all first
+    [monthField, quarterField, weekField].forEach(f => f.classList.add('hidden'));
+
+    // Show relevant fields
+    if (planType === 'monthly') {
+        monthField.classList.remove('hidden');
+    } else if (planType === 'quarterly') {
+        quarterField.classList.remove('hidden');
+    } else if (planType === 'weekly') {
+        monthField.classList.remove('hidden'); // Weeks often depend on the month
+        weekField.classList.remove('hidden');
+    }
+    
+    // ⭐️ NEW: Call the KPI fields update function
+    updateKpiQuarterlyFields();
+}
+
+planTypeSelect.addEventListener('change', updatePlanFields);
+planTypeSelect.addEventListener('change', updateKpiQuarterlyFields); // Added explicitly for clarity
+updatePlanFields(); // Call on page load
+       
     });
 </script>
 {% endblock %}

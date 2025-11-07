@@ -5,7 +5,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.urls import reverse_lazy
 from django.contrib.auth.decorators import login_required
-from plans.models import Plan, StrategicGoal, KPI, Activity
+from plans.models import Plan, StrategicGoal, KPI, MajorActivity
 from reports.models import Report
 
 

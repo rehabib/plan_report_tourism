@@ -4,10 +4,17 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.db.models import Q
-from django.http import Http404 
-from .models import Plan, StrategicGoal, KPI, Activity
+from django.http import Http404
 from django.forms import inlineformset_factory
-from .forms import PlanCreationForm, StrategicGoalFormset, KPIFormset, ActivityFormset
+from django.db import transaction # Important for atomic nested saves
+from .models import Plan, StrategicGoal, KPI, MajorActivity, DetailActivity
+from .forms import (
+    PlanCreationForm, 
+    StrategicGoalFormset, 
+    KPIFormset, 
+    MajorActivityFormset, 
+    DetailActivityFormset 
+)
 from accounts.models import User
 
 
@@ -41,7 +48,8 @@ def dashboard(request):
     Displays the dashboard with plans based on the user's role and selected filter.
     """
     user_role = request.user.role.lower()
-    prefetch_fields = ('goals', 'kpis', 'activities')
+    # Updated prefetch to include the new activity structure
+    prefetch_fields = ('goals', 'kpis', 'major_activities__detail_activities') 
     base_query = Plan.objects.all().prefetch_related(*prefetch_fields).order_by('-year', '-month', '-week_number')
 
     show_my_plans = request.GET.get('show', 'all') == 'my_plans'
@@ -77,57 +85,162 @@ def dashboard(request):
     return render(request, 'plans/dashboard.html', context)
 
 
+# Helper function to process nested MajorActivity/DetailActivity formsets
+def process_activity_formsets(request, plan, major_activity_formset):
+    """
+    Handles validation and saving of MajorActivityFormset and its nested DetailActivityFormsets.
+    
+    CRITICAL: This iterates over the MajorActivity forms, saves the MajorActivity 
+    instance (to get a PK), and then instantiates and validates the nested 
+    DetailActivityFormset using a dynamic prefix linked to the parent form.
+    
+    Returns True on success, or False if any formset fails validation.
+    """
+    # 1. First-level save (MajorActivity) - Get instances without saving to DB yet
+    major_activities_instances = major_activity_formset.save(commit=False)
+    
+    for i, major_activity_form in enumerate(major_activity_formset.forms):
+        
+        # Determine the MajorActivity instance (existing or new)
+        if major_activity_form.instance.pk:
+            major_activity = major_activity_form.instance
+        elif major_activity_form.cleaned_data:
+            # New instance that passed validation
+            major_activity = major_activities_instances[i]
+        else:
+            # Empty form or form marked for deletion, skip
+            continue
+                
+        # Check if the MajorActivity is being deleted
+        if major_activity_form.cleaned_data.get('DELETE'):
+            if major_activity.pk:
+                major_activity.delete()
+            continue
+            
+        # Ensure MajorActivity instance is saved before processing nested formset
+        # We must save here to get a primary key (PK) for the child formset to link to
+        if not major_activity.pk:
+            major_activity.plan = plan
+            major_activity.save()
+
+        # 2. Second-level instantiation and validation (DetailActivity)
+        # The prefix must uniquely link the child formset to its parent form in the POST data
+        # The parent form prefix (e.g., major_activities-0) is used to create a unique prefix for the child (e.g., detail_activities-major_activities-0)
+        detail_activity_formset = DetailActivityFormset(
+            request.POST, 
+            request.FILES, 
+            instance=major_activity,
+            prefix=f'detail_activities-{major_activity_form.prefix}'
+        )
+
+        if not detail_activity_formset.is_valid():
+            # Add errors from nested formset back to the parent form to display them
+            for detail_form in detail_activity_formset.forms:
+                if detail_form.errors:
+                    # Collect all errors from the detail form and display them on the parent form
+                    error_messages = ", ".join([f"{k}: {v[0]}" for k, v in detail_form.errors.items()])
+                    major_activity_form.add_error(None, f"Errors in Detail Activities for '{major_activity.name or 'New Activity'}': {error_messages}")
+            return False # Validation failed
+
+        # 3. Save DetailActivity formset
+        # Save the MajorActivity instance again in case it was a new instance 
+        # and then save the children.
+        major_activity.save()
+        detail_activity_formset.save()
+        
+    # Handle forms that were marked for deletion (MajorActivities that existed previously)
+    major_activity_formset.save(commit=False)
+
+    return True
+
+
 @login_required
 def create_plan(request):
     """
-    Handles the creation of a new plan, passing plan_type to KPI formset for validation.
+    Handles the creation of a new plan with nested goals, KPIs, and activities.
+    Uses transaction.atomic for all-or-nothing data saving.
     """
     if request.method == 'POST':
         form = PlanCreationForm(request.POST)
 
-        # 1. Determine plan_type from POST data for formset validation
+        # 1. Determine plan_type for KPI formset
+        posted_plan_type = request.POST.get('plan_type')
         plan_type = None
         formset_kwargs = {}
 
         if form.is_valid():
-            # If the main form is valid, use the user-selected plan_type
             plan_type = form.cleaned_data.get('plan_type')
+        elif posted_plan_type:
+            plan_type = posted_plan_type
+            
+        if plan_type:
             formset_kwargs = {'plan_type': plan_type}
         
-        # 2. Instantiate formsets, passing the plan_type to KPIFormset
+        # 2. Instantiate formsets, using the correct MajorActivityFormset
         goal_formset = StrategicGoalFormset(request.POST, prefix='goals')
-        kpi_formset = KPIFormset(request.POST, prefix='kpis', form_kwargs=formset_kwargs) # <-- CRITICAL CHANGE
-        activity_formset = ActivityFormset(request.POST, prefix='activities')
+        kpi_formset = KPIFormset(request.POST, prefix='kpis', form_kwargs=formset_kwargs)
+        major_activity_formset = MajorActivityFormset(request.POST, prefix='major_activities')
 
-        if form.is_valid() and goal_formset.is_valid() and kpi_formset.is_valid() and activity_formset.is_valid():
-            plan = form.save(commit=False)
-            plan.user = request.user
-            plan.level = request.user.role.lower()
-            plan.save()
+        # Use an outer flag to check for overall validity before entering the transaction
+        is_valid = form.is_valid() and goal_formset.is_valid() and kpi_formset.is_valid() and major_activity_formset.is_valid()
 
-            goal_formset.instance = plan
-            goal_formset.save()
+        if is_valid:
+            try:
+                with transaction.atomic():
+                    
+                    # A. Prepare & Save Plan Instance
+                    plan = form.save(commit=False)
+                    plan.user = request.user
+                    plan.level = request.user.role.lower()
+                    plan.save()
+                    
+                    # B. Save first-level inlines (Goals, KPIs)
+                    goal_formset.instance = plan
+                    goal_formset.save()
+                    
+                    kpi_formset.instance = plan
+                    
+                    # Clear quarterly targets for non-yearly plans before saving KPIs
+                    if plan_type and plan_type != 'yearly':
+                        for kpi_form in kpi_formset:
+                            # Check if the form has data and is not marked for deletion
+                            if kpi_form.has_changed() or kpi_form.instance.pk:
+                                if not kpi_form.cleaned_data.get('DELETE', False) and kpi_form.cleaned_data.get('name'):
+                                    kpi_form.instance.target_q1 = 0.0
+                                    kpi_form.instance.target_q2 = 0.0
+                                    kpi_form.instance.target_q3 = 0.0
+                                    kpi_form.instance.target_q4 = 0.0
+
+                    kpi_formset.save()
+                    
+                    # C. Handle nested activities (will save major and detail activities)
+                    if not process_activity_formsets(request, plan, major_activity_formset):
+                        # If validation in process_activity_formsets fails, errors are added to the formset, 
+                        # and we raise an exception to trigger the rollback of the transaction.
+                        raise Exception("Nested activity validation failed.")
+
+
+                return redirect('plan_success', plan_id=plan.id)
             
-            kpi_formset.instance = plan
-            kpi_formset.save()
-            
-            activity_formset.instance = plan
-            activity_formset.save()
+            except Exception as e:
+                # The transaction rolls back. We simply fall through to render the form 
+                # with the errors present on the formsets.
+                pass
 
-            return redirect('plan_success', plan_id=plan.id)
     else:
-        # GET request: formsets use default 'yearly' plan_type in form.py
+        # GET request
         form = PlanCreationForm()
         goal_formset = StrategicGoalFormset(prefix='goals')
         kpi_formset = KPIFormset(prefix='kpis')
-        activity_formset = ActivityFormset(prefix='activities')
+        major_activity_formset = MajorActivityFormset(prefix='major_activities')
 
     context = {
         'form': form,
         'goal_formset': goal_formset,
         'kpi_formset': kpi_formset,
-        'activity_formset': activity_formset,
-        'plan_instance': None, # Indicates 'Create' mode
+        'major_activity_formset': major_activity_formset,
+        'detail_activity_formset': DetailActivityFormset, # Pass the class for dynamic rendering in template
+        'plan_instance': None,
     }
     return render(request, 'plans/create_plan.html', context)
 
@@ -135,8 +248,7 @@ def create_plan(request):
 @login_required
 def edit_plan(request, plan_id):
     """
-    Handles the editing of an existing plan and its related goals, KPIs, and activities.
-    Passes the existing or posted plan_type to the KPI formset.
+    Handles the editing of an existing plan and its related goals, KPIs, and nested activities.
     """
     plan = get_object_or_404(Plan, id=plan_id)
     
@@ -147,46 +259,76 @@ def edit_plan(request, plan_id):
         form = PlanCreationForm(request.POST, instance=plan)
         
         # 1. Determine plan_type based on POST data or existing instance
+        posted_plan_type = request.POST.get('plan_type')
         plan_type = None
+        
         if form.is_valid():
-            # Use POST data if valid
             plan_type = form.cleaned_data.get('plan_type')
-        elif plan.plan_type:
-            # Fallback to existing plan_type if POST is invalid
-             plan_type = plan.plan_type
-             
+        elif posted_plan_type:
+            plan_type = posted_plan_type
+        else:
+            plan_type = plan.plan_type
+            
         formset_kwargs = {'plan_type': plan_type} if plan_type else {}
 
-        # 2. Instantiate formsets, passing the plan_type to KPIFormset
+        # 2. Instantiate formsets, using the correct MajorActivityFormset
         goal_formset = StrategicGoalFormset(request.POST, instance=plan, prefix='goals')
-        kpi_formset = KPIFormset(request.POST, instance=plan, prefix='kpis', form_kwargs=formset_kwargs) # <-- CRITICAL CHANGE
-        activity_formset = ActivityFormset(request.POST, instance=plan, prefix='activities')
+        kpi_formset = KPIFormset(request.POST, instance=plan, prefix='kpis', form_kwargs=formset_kwargs)
+        major_activity_formset = MajorActivityFormset(request.POST, instance=plan, prefix='major_activities')
 
-        if form.is_valid() and goal_formset.is_valid() and kpi_formset.is_valid() and activity_formset.is_valid():
-            form.save()
-            goal_formset.save()
-            kpi_formset.save()
-            activity_formset.save()
+        is_valid = form.is_valid() and goal_formset.is_valid() and kpi_formset.is_valid() and major_activity_formset.is_valid()
 
-            return redirect('dashboard')
+        if is_valid:
+            try:
+                with transaction.atomic():
+                    
+                    # A. Save Plan Instance
+                    form.save()
+                    
+                    # B. Save first-level inlines (Goals, KPIs)
+                    goal_formset.save()
+                    
+                    # Clear quarterly targets for non-yearly plans before saving KPIs
+                    if plan_type and plan_type != 'yearly':
+                        for kpi_form in kpi_formset:
+                            # Check if the form has data and is not marked for deletion
+                            if kpi_form.has_changed() or kpi_form.instance.pk:
+                                if not kpi_form.cleaned_data.get('DELETE', False) and kpi_form.cleaned_data.get('name'):
+                                    kpi_form.instance.target_q1 = 0.0
+                                    kpi_form.instance.target_q2 = 0.0
+                                    kpi_form.instance.target_q3 = 0.0
+                                    kpi_form.instance.target_q4 = 0.0
+                                    
+                    kpi_formset.save()
+                    
+                    # C. Handle nested activities (will save major and detail activities)
+                    if not process_activity_formsets(request, plan, major_activity_formset):
+                        raise Exception("Nested activity validation failed.")
+
+                return redirect('dashboard')
+            
+            except Exception as e:
+                # Catch error from failed nested save and re-render forms with errors
+                pass
+
     else:
         # GET request
         form = PlanCreationForm(instance=plan)
         
-        # 1. Get the existing plan_type from the instance
         plan_type = plan.plan_type
         formset_kwargs = {'plan_type': plan_type} if plan_type else {}
 
         # 2. Instantiate formsets with existing instance and plan_type
         goal_formset = StrategicGoalFormset(instance=plan, prefix='goals')
-        kpi_formset = KPIFormset(instance=plan, prefix='kpis', form_kwargs=formset_kwargs) # <-- CRITICAL CHANGE
-        activity_formset = ActivityFormset(instance=plan, prefix='activities')
+        kpi_formset = KPIFormset(instance=plan, prefix='kpis', form_kwargs=formset_kwargs)
+        major_activity_formset = MajorActivityFormset(instance=plan, prefix='major_activities')
 
     context = {
         'form': form,
         'goal_formset': goal_formset,
         'kpi_formset': kpi_formset,
-        'activity_formset': activity_formset,
+        'major_activity_formset': major_activity_formset, 
+        'detail_activity_formset': DetailActivityFormset, # Pass the class for dynamic rendering in template
         'plan_instance': plan, 
     }
     return render(request, 'plans/create_plan.html', context)
@@ -205,11 +347,20 @@ def view_plan(request, plan_id):
     """
     Displays the details of a specific plan with proper access control.
     """
-    plan = get_object_or_404(Plan, id=plan_id)
+    # Eagerly load all related data for efficient template rendering
+    plan = get_object_or_404(
+        Plan.objects.prefetch_related(
+            'goals', 
+            'kpis', 
+            'major_activities__detail_activities'
+        ), 
+        id=plan_id
+    )
     
     user_role = request.user.role.lower()
     can_view = False
 
+    # Access control logic based on user role and plan ownership
     if user_role == 'corporate' or (plan.user == request.user) or \
        (user_role == 'department' and plan.user.department == request.user.department):
         can_view = True
@@ -217,23 +368,26 @@ def view_plan(request, plan_id):
     if not can_view:
         raise Http404("You do not have permission to view this plan.")
 
-    goals = StrategicGoal.objects.filter(plan=plan)
-    kpis = KPI.objects.filter(plan=plan)
-    activities = Activity.objects.filter(plan=plan)
+    # Data is available via relationship managers
+    goals = plan.goals.all()
+    kpis = plan.kpis.all()
+    major_activities = plan.major_activities.all()
     
     context = {
         'plan': plan,
         'goals': goals,
         'kpis': kpis,
-        'activities': activities,
+        # Pass Major Activities to the template for nested display 
+        'major_activities': major_activities, 
     }
+    
     return render(request, 'plans/view_plan.html', context)
     
 
 @login_required
 def delete_plan(request, plan_id):
     """
-    Deletes a specific plan.
+    Deletes a specific plan (only accessible by the plan creator).
     """
     plan_to_delete = get_object_or_404(Plan, pk=plan_id)
     

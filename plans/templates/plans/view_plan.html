@@ -2,77 +2,140 @@
 
 {% block content %}
 <div class="bg-white p-8 rounded-lg shadow-xl max-w-4xl mx-auto mt-10 lg:mt-24">
-    <h1 class="text-3xl font-bold text-center text-blue-600 mb-6">Plan Details</h1>
+    <h1 class="text-3xl font-bold text-center text-blue-600 mb-6">Plan Details</h1>
 
-    <!-- Plan Overview -->
-    <div class="border-b pb-4 mb-4">
-        <div class="flex justify-between items-center">
-            <h2 class="text-2xl font-semibold text-gray-800">
-                {{ plan.plan_type|capfirst }} Plan
-                for
-                {% if plan.plan_type == 'yearly' %}
-                    {{ plan.year }}
-                {% elif plan.plan_type == 'quarterly' %}
-                    Q{{ plan.quarter_number }} - {{ plan.year }}
-                {% elif plan.plan_type == 'monthly' %}
-                    {{ plan.month|date:"F" }} - {{ plan.year }}
-                {% elif plan.plan_type == 'weekly' %}
-                    Week {{ plan.week_number }} - {{ plan.month|date:"F" }} - {{ plan.year }}
+        <div class="border-b pb-4 mb-4">
+        <div class="flex justify-between items-center">
+            <h2 class="text-2xl font-semibold text-gray-800">
+                {{ plan.plan_type|capfirst }} Plan
+                for
+                {% if plan.plan_type == 'yearly' %}
+                    {{ plan.year }}
+                {% elif plan.plan_type == 'quarterly' %}
+                    Q{{ plan.quarter_number }} - {{ plan.year }}
+                {% elif plan.plan_type == 'monthly' %}
+                    {{ plan.month|date:"F" }} - {{ plan.year }}
+                {% elif plan.plan_type == 'weekly' %}
+                    Week {{ plan.week_number }} - {{ plan.month|date:"F" }} - {{ plan.year }}
+                {% endif %}
+            </h2>
+            <div class="flex space-x-2">
+                {% if user.is_authenticated and plan.user == request.user %}
+                    <a href="{% url 'edit_plan' plan.id %}" class="bg-blue-500 text-white font-medium py-2 px-4 rounded-full hover:bg-blue-600 transition-colors flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-7.243 7.242-2.828 2.828L.757 16.243a1 1 0 01-.707-1.707l14-14z" />
+                        </svg>
+                        Edit Plan
+                    </a>
+                {% endif %}
+                <a href="{% url 'dashboard' %}" class="bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-full hover:bg-gray-400 transition-colors">
+                    Back to Dashboard
+                </a>
+            </div>
+        </div>
+        <p class="text-gray-600 mt-2">Level: {{ plan.level|capfirst }}</p>
+        <p class="text-gray-600 mt-1">Status: 
+            <span class="font-semibold 
+            {% if plan.status == 'APPROVED' %}text-green-600
+            {% elif plan.status == 'REJECTED' %}text-red-600
+            {% else %}text-yellow-600
+            {% endif %}">
+            {{ plan.get_status_display }}
+            </span>
+        </p>
+        {% if plan.review_comments %}
+        <blockquote class="text-sm italic text-gray-700 mt-2 p-3 border-l-4 border-gray-400 bg-gray-50">
+            Review Comments: "{{ plan.review_comments }}"
+        </blockquote>
+        {% endif %}
+    </div>
+
+    <hr class="my-6">
+
+        <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-2">1. Strategic Goals</h3>
+    <ul class="list-disc list-inside space-y-2 mb-6">
+        {% for goal in goals %}
+            <li class="text-gray-800 font-medium">{{ goal.title }}</li>
+        {% empty %}
+            <li class="text-gray-500">No strategic goals defined.</li>
+        {% endfor %}
+    </ul>
+    
+    <hr class="my-6">
+
+        <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-2">2. Key Performance Indicators (KPIs)</h3>
+    <div class="space-y-4 mb-6">
+        {% for kpi in kpis %}
+            <div class="border p-4 rounded-md bg-gray-50 shadow-sm">
+                                <div class="flex justify-between items-center mb-3 border-b pb-2">
+                    <p class="font-bold text-lg text-gray-800">{{ kpi.name }}</p>
+                    <p class="text-sm text-blue-600 font-medium border border-blue-200 bg-blue-50 px-3 py-1 rounded-full">
+                        Measure: {{ kpi.measurement|default:"N/A" }}
+                    </p>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-4 text-sm text-center">
+                    <div>
+                        <span class="font-medium text-gray-700 block">Baseline</span>
+                        <span class="text-gray-900 font-semibold">{{ kpi.baseline }}</span>
+                    </div>
+                    <div>
+                        <span class="font-medium text-gray-700 block">Target</span>
+                        <span class="text-gray-900 font-semibold">{{ kpi.target }}</span>
+                    </div>
+                    <div>
+                        <span class="font-medium text-gray-700 block">Weight</span>
+                        <span class="text-gray-900 font-semibold">{{ kpi.weight|floatformat:2|default:"N/A" }}</span>
+                    </div>
+                </div>
+
+                {% if plan.plan_type == 'yearly' or plan.plan_type == 'quarterly' %}
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <p class="text-xs font-semibold text-gray-600 mb-2">Quarterly Targets:</p>
+                    <div class="grid grid-cols-4 gap-2 text-xs text-center">
+                        <div><span class="font-medium text-gray-700 block">Q1</span><span class="text-gray-900">{{ kpi.target_q1 }}</span></div>
+                        <div><span class="font-medium text-gray-700 block">Q2</span><span class="text-gray-900">{{ kpi.target_q2 }}</span></div>
+                        <div><span class="font-medium text-gray-700 block">Q3</span><span class="text-gray-900">{{ kpi.target_q3 }}</span></div>
+                        <div><span class="font-medium text-gray-700 block">Q4</span><span class="text-gray-900">{{ kpi.target_q4 }}</span></div>
+                    </div>
+                </div>
                 {% endif %}
-            </h2>
-            <div class="flex space-x-2">
-                {% if user.is_authenticated and plan.user == request.user %}
-                    <a href="{% url 'edit_plan' plan.id %}" class="bg-blue-500 text-white font-medium py-2 px-4 rounded-full hover:bg-blue-600 transition-colors flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-7.243 7.242-2.828 2.828L.757 16.243a1 1 0 01-.707-1.707l14-14z" />
-                        </svg>
-                        Edit Plan
-                    </a>
+                
+                {% if not kpi.latest_report %}
+                <p class="text-red-500 text-xs mt-3">**Tracking data not available. Create a report to track progress.**</p>
                 {% endif %}
-                <a href="{% url 'dashboard' %}" class="bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-full hover:bg-gray-400 transition-colors">
-                    Back to Dashboard
-                </a>
-            </div>
-        </div>
-        <p class="text-gray-600 mt-2">Level: {{ plan.level|capfirst }}</p>
-    </div>
+                
+            </div>
+        {% empty %}
+            <p class="text-gray-500">No KPIs defined.</p>
+        {% endfor %}
+    </div>
+    
+    <hr class="my-6">
 
-    <!-- Strategic Goals -->
-    <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-2">Strategic Goals</h3>
-    <ul class="list-disc list-inside space-y-2 mb-6">
-        {% for goal in goals %}
-            <li class="text-gray-800">{{ goal.title }}</li>
-        {% empty %}
-            <li class="text-gray-500">No strategic goals defined.</li>
-        {% endfor %}
-    </ul>
+        <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-2">3. Activities</h3>
+    <div class="space-y-4">
+        {% for activity in activities %}
+            <div class="border p-4 rounded-md bg-gray-50 shadow-sm">
+                <div class="flex justify-between items-start mb-2">
+                    <p class="font-medium text-gray-800">Major Activity: {{ activity.major_activity }}</p>
+                    <p class="text-sm font-semibold 
+                        {% if activity.status == 'COMPLETED' %}text-green-600
+                        {% elif activity.status == 'IN_PROGRESS' %}text-yellow-600
+                        {% else %}text-gray-500
+                        {% endif %}">
+                        {{ activity.get_status_display }}
+                    </p>
+                </div>
 
-    <!-- KPIs -->
-    <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-2">Key Performance Indicators (KPIs)</h3>
-    <div class="space-y-4 mb-6">
-        {% for kpi in kpis %}
-            <div class="border p-4 rounded-md bg-gray-50">
-                <p class="font-medium text-gray-800">{{ kpi.name }}</p>
-                <p class="text-sm text-gray-600">Baseline: {{ kpi.baseline }} | Target: {{ kpi.target }}</p>
-            </div>
-        {% empty %}
-            <p class="text-gray-500">No KPIs defined.</p>
-        {% endfor %}
-    </div>
-
-    <!-- Activities -->
-    <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-2">Activities</h3>
-    <div class="space-y-4">
-        {% for activity in activities %}
-            <div class="border p-4 rounded-md bg-gray-50">
-                <p class="font-medium text-gray-800">Major Activity: {{ activity.major_activity }}</p>
-                <p class="text-sm text-gray-600">Responsible Person: {{ activity.responsible_person }}</p>
-                <p class="text-sm text-gray-600">Detailed Steps: {{ activity.detail_activity }}</p>
-                <p class="text-sm text-gray-600">Budget: ${{ activity.budget|floatformat:2 }}</p>
-            </div>
-        {% empty %}
-            <p class="text-gray-500">No activities defined.</p>
-        {% endfor %}
-    </div>
+                                <p class="text-sm text-gray-600">Responsible Person: {{ activity.responsible_person }}</p>
+                <p class="text-sm text-gray-600">Detailed Steps: {{ activity.detail_activity }}</p>
+                <p class="text-sm text-gray-600">Budget: <span class="font-medium text-green-700">${{ activity.budget|floatformat:2 }}</span></p>
+                <p>Total Budget for Plan: ${{ plan.total_budget|floatformat:2 }}</p>
+            </div>
+        {% empty %}
+            <p class="text-gray-500">No activities defined.</p>
+        {% endfor %}
+    </div>
 </div>
 {% endblock %}
