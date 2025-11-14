@@ -1,32 +1,46 @@
 from django.contrib import admin
 from .models import Plan, StrategicGoal, KPI, MajorActivity, DetailActivity
 
+# --- Import custom forms and formsets for validation ---
+# We need to import the custom form and formset class to enforce the budget/weight constraints
+from .forms import DetailActivityForm, BaseDetailActivityFormSet
+
 # --- 1. Detail Activity Inline (Lowest Level) ---
 
 class DetailActivityInline(admin.TabularInline):
-    """Inline for managing DetailActivity models within a MajorActivity."""
+    """
+    Inline for managing DetailActivity models within a MajorActivity.
+    
+    CRUCIAL: We assign the custom form and formset here to enable the 
+    weight/budget sum validation upon saving the MajorActivity.
+    """
     model = DetailActivity
     extra = 1
+    # ASSIGN CUSTOM FORM and FORMSET for complex validation
+    form = DetailActivityForm 
+    formset = BaseDetailActivityFormSet 
+    
     fields = [
-        'description', 
-        'weight', 
-        'responsible_person', 
+        'description',  
+        'weight',  
+        'budget',  # <-- FIX: Added the missing budget field
+        'responsible_person',  
         'status'
     ]
-    # Use raw_id_fields for foreign keys if you expect many records, but usually not needed for inlines
-    # raw_id_fields = ('major_activity',) 
 
 
 # --- 2. Major Activity Inline (Mid-Level, contains Detail Inline) ---
 
 class MajorActivityInline(admin.StackedInline):
-    """Inline for managing MajorActivity models within a Plan. This is the NESTED part."""
+    """
+    Inline for managing MajorActivity models within a Plan. 
+    This is the NESTED part.
+    """
     model = MajorActivity
     extra = 1
-    # Fields for the Major Activity itself
     fields = [
-        'name', 
-        'total_weight', 
+        'name',  
+        'total_weight',  
         'budget'
     ]
     # NESTED INLINE: Include Detail Activities here
@@ -42,16 +56,23 @@ class StrategicGoalInline(admin.TabularInline):
 
 
 class KPIInline(admin.TabularInline):
+    """
+    KPI Inline. Note: Admin inlines do not use formset validation directly,
+    so the complex progressive target validation will run when the form 
+    is validated in the admin view.
+    """
     model = KPI
     extra = 1
     fields = [
-        'name', 
-        'measurement', 
-        'baseline', 
-        'target', 
+        'name',  
+        'measurement',  
+        'baseline',  
+        'target',  
         ('target_q1', 'target_q2', 'target_q3', 'target_q4') # Group quarterly targets
-    ] 
-    # Use max_num=4 to limit the number of KPIs, if necessary (e.g., if you only want 4 KPIs per plan)
+    ]  
+    
+    # You could optionally assign KPIForm here if you needed to pass extra context 
+    # to its __init__ (like plan_type), but for basic admin functionality, this is often skipped.
 
 
 # --- Plan Admin (Top Level) ---
@@ -65,7 +86,7 @@ class PlanAdmin(admin.ModelAdmin):
         "plan_type",
         "year",
         "status",
-        "total_budget", # Display the calculated total budget property from the Plan model
+        "total_budget", 
         "created_at",
     )
     list_display_links = ("__str__",)
@@ -73,7 +94,7 @@ class PlanAdmin(admin.ModelAdmin):
     search_fields = ("user__username", "level", "plan_type")
     
     # Inlines are listed here. MajorActivityInline now brings its DetailActivity children.
-    inlines = [StrategicGoalInline, KPIInline, MajorActivityInline] 
+    inlines = [StrategicGoalInline, KPIInline, MajorActivityInline]  
     
     date_hierarchy = "created_at"
 

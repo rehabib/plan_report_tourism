@@ -4,13 +4,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tourism Management System</title>
+<title>Plan and Report System</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen font-sans antialiased">
+<body class="bg-blue-100 min-h-screen font-sans antialiased">
 <header class="bg-white shadow-md py-4 px-6 mb-8">
 <nav class="container mx-auto flex justify-between items-center">
-<a href="{% url 'dashboard' %}" class="text-2xl font-bold text-blue-600">Tourism Management</a>
+
+<a href="{% url 'dashboard' %}" class="text-2xl font-bold text-blue-600">Ministry of Tourism</a>
+<img src="plans/images/tourism logo.jpg" 
+                     alt="Tourism Logo" 
+                     class="h-10 w-10 mr-3 object-cover rounded-md shadow-sm">
 <div>
 {% if user.is_authenticated %}
 <span class="text-gray-700 mr-4">Welcome, {{ user.username }}</span>
@@ -22,11 +26,14 @@
 <a href="{% url 'login' %}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">Login</a>
 {% endif %}
 </div>
-</nav>
 </header>
 <main class="container mx-auto px-6 py-8">
 {% block content %}
 {% endblock %}
 </main>
+
+<footer class="mt-12 py-4 text-center text-sm text-gray-500 border-t">
+        &copy; 2025 Ministry of Tourism. All rights reserved.
+</footer>
 </body>
 </html>

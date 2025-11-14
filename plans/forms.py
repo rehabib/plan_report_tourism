@@ -4,7 +4,7 @@ from django.forms.models import BaseInlineFormSet
 from django.core.exceptions import ValidationError
 from decimal import Decimal
 
-# Updated imports to reflect the new model structure
+# Import all models needed for forms and formsets
 from .models import Plan, StrategicGoal, KPI, MajorActivity, DetailActivity
 
 
@@ -12,7 +12,7 @@ from .models import Plan, StrategicGoal, KPI, MajorActivity, DetailActivity
 class BaseDetailActivityFormSet(BaseInlineFormSet):
     """
     Custom formset to validate that the sum of all child DetailActivity weights 
-    equals the parent MajorActivity's total_weight.
+    and budgets match or do not exceed the parent MajorActivity's totals.
     """
     def clean(self):
         super().clean()
@@ -23,44 +23,65 @@ class BaseDetailActivityFormSet(BaseInlineFormSet):
 
         # self.instance is the MajorActivity object this formset is bound to.
         major_activity = self.instance
+        
+        # Get required totals from the parent MajorActivity
         required_total_weight = major_activity.total_weight
+        required_total_budget = major_activity.budget
+        
+        # Initialize sums for current detail activities
         current_total_weight = Decimal('0.00')
+        current_total_budget = Decimal('0.00')
 
-        # We must have a required total weight on the parent to perform this check.
-        if required_total_weight is None:
-            # If no weight is set on the parent, skip the sum check, but we should 
-            # ideally enforce total_weight in MajorActivityForm if children exist.
-            # For simplicity, we rely on the MajorActivityForm to handle required fields.
-            pass
-
+        # Calculate sums from the forms being submitted
         for form in self.forms:
             # Only process forms that have data and are not marked for deletion
             if form.cleaned_data and not form.cleaned_data.get('DELETE'):
                 weight = form.cleaned_data.get('weight')
+                budget = form.cleaned_data.get('budget')
+                
                 if weight is not None:
                     current_total_weight += weight
+                if budget is not None:
+                    current_total_budget += budget
         
-        # Perform the main validation check against the parent's total_weight
+        # --- 1. Weight Validation (Must match Major Activity total) ---
         if required_total_weight is not None:
-            # Check for a small tolerance (e.g., 0.01) to account for potential float/Decimal issues
+            # Check for exact match with a small tolerance for Decimal precision
             if abs(current_total_weight - required_total_weight) > Decimal('0.01'):
                 raise ValidationError(
                     f"Weight Mismatch: The total weight of all Detail Activities ({current_total_weight:.2f}) "
                     f"must match the Major Activity's Total Weight ({required_total_weight:.2f})."
                 )
 
+        # --- 2. Budget Validation (Must not exceed Major Activity total) ---
+        if required_total_budget is not None:
+            # Check if the sum of detail budgets exceeds the major budget
+            if current_total_budget > required_total_budget:
+                raise ValidationError(
+                    f"Budget Exceeded: The total budget of all Detail Activities ({current_total_budget:.2f}) "
+                    f"exceeds the Major Activity's Total Budget ({required_total_budget:.2f})."
+                )
+            # You can add the optional 'must equal' check here if needed:
+            # if abs(current_total_budget - required_total_budget) > Decimal('0.01'):
+            #     raise ValidationError(
+            #         f"Budget Mismatch: The total budget of all Detail Activities ({current_total_budget:.2f}) "
+            #         f"must match the Major Activity's Total Budget ({required_total_budget:.2f})."
+            #     )
+
+
 # --- Detail Activity Form and Formset ---
 
 class DetailActivityForm(forms.ModelForm):
     """
-    Form for a single DetailActivity.
+    Form for a single DetailActivity, including weight and budget fields.
     """
     class Meta:
         model = DetailActivity
-        fields = ['description', 'weight', 'responsible_person', 'status']
+        fields = ['description', 'weight', 'budget', 'responsible_person', 'status']
         widgets = {
             'description': forms.Textarea(attrs={'class': 'w-full px-2 py-1 border rounded-md text-sm', 'placeholder': 'Specific steps/tasks', 'rows': 2}),
             'weight': forms.NumberInput(attrs={'class': 'w-full px-2 py-1 border rounded-md text-sm', 'placeholder': 'Weight share'}),
+            'budget': forms.NumberInput(attrs={'class': 'w-full px-2 py-1 border rounded-md text-sm', 'placeholder': 'Budget share'}),
             'responsible_person': forms.TextInput(attrs={'class': 'w-full px-2 py-1 border rounded-md text-sm', 'placeholder': 'Responsible'}),
             'status': forms.Select(attrs={'class': 'w-full px-2 py-1 border rounded-md text-sm'}),
         }
@@ -70,7 +91,7 @@ DetailActivityFormset = inlineformset_factory(
     MajorActivity, 
     DetailActivity, 
     form=DetailActivityForm, 
-    formset=BaseDetailActivityFormSet, # <--- Added custom base formset
+    formset=BaseDetailActivityFormSet, # <--- Uses custom validation
     extra=1, 
     can_delete=True
 )
@@ -88,15 +109,15 @@ class StrategicGoalForm(forms.ModelForm):
             'title': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Enter a strategic goal'}),
         }
         
-# Set can_delete=True to automatically include the hidden fields for deletion.
 StrategicGoalFormset = inlineformset_factory(Plan, StrategicGoal, form=StrategicGoalForm, extra=1, can_delete=True)
 
 
-# --- KPI Form and Formset (Unchanged) ---
+# --- KPI Form and Formset ---
 
 class KPIForm(forms.ModelForm):
     """
     Form for a single KPI.
+    Handles progressive target validation for Yearly Plans.
     """
     class Meta:
         model = KPI
@@ -129,7 +150,7 @@ class KPIForm(forms.ModelForm):
             q_values = [cleaned_data.get(f) for f in q_fields]
             yearly_target = cleaned_data.get('target')
             
-            # Check 1: Ensure all quarterly targets are provided if the form is active
+            # --- Check 1: Ensure quarterly targets are provided ---
             if any(q is None for q in q_values) and (self.has_changed() or self.instance.pk):
                 for field_name in q_fields:
                     if cleaned_data.get(field_name) is None:
@@ -137,14 +158,14 @@ class KPIForm(forms.ModelForm):
                         
                 q_values = [cleaned_data.get(f) for f in q_fields]
 
-            # Check 2: Progressive Target Validation (Q1 <= Q2 <= Q3 <= Q4)
+            # --- Check 2: Progressive Target Validation (Q1 <= Q2 <= Q3 <= Q4) ---
             if all(q is not None for q in q_values):
                 if not (q_values[0] <= q_values[1] <= q_values[2] <= q_values[3]):
                     raise forms.ValidationError(
                         "Quarterly targets must be progressive (non-decreasing): Q1 ≤ Q2 ≤ Q3 ≤ Q4."
                     )
                 
-                # Check 3: Total Target must equal Q4 Target
+                # --- Check 3: Total Target must equal Q4 Target ---
                 q4_target = q_values[3]
                 
                 if yearly_target is None:
@@ -157,7 +178,6 @@ class KPIForm(forms.ModelForm):
                         )
 
         return cleaned_data    
-# Set can_delete=True to automatically include the hidden fields for deletion.
 KPIFormset = inlineformset_factory(Plan, KPI, form=KPIForm, extra=1, can_delete=True)
 
 
@@ -179,9 +199,8 @@ class MajorActivityForm(forms.ModelForm):
     # Custom cleaning to ensure total_weight is required if the form is being submitted
     def clean_total_weight(self):
         total_weight = self.cleaned_data.get('total_weight')
-        # We only strictly require total_weight if the activity name is provided (i.e., the user is trying to save it)
         if self.cleaned_data.get('name') and total_weight is None:
-            raise forms.ValidationError("Total weight is required for a Major Activity.")
+            raise forms.ValidationError("Total weight is required for a Major Activity if a name is provided.")
         return total_weight
 
 
@@ -189,13 +208,13 @@ class MajorActivityForm(forms.ModelForm):
 MajorActivityFormset = inlineformset_factory(Plan, MajorActivity, form=MajorActivityForm, extra=1, can_delete=True)
 
 
-# --- Plan Creation Form (Unchanged) ---
+# --- Plan Creation Form ---
 
 class PlanCreationForm(forms.ModelForm):
     """
     The main form for the Plan model, which will be used in conjunction with the formsets.
     """
-    # Use ChoiceField with the choices from the Plan model
+    # Using forms.ChoiceField to allow for an empty initial selection
     month = forms.ChoiceField(
         choices=[('', 'Select a Month')] + list(Plan.MONTH_CHOICES),
         required=False,
@@ -209,24 +228,22 @@ class PlanCreationForm(forms.ModelForm):
         widgets = {
             'plan_type': forms.Select(attrs={'class': 'w-full px-3 py-2 border rounded-md'}),
             'year': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'e.g., 2024'}),
-            'week_number': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'e.g., 1-4'}),
+            'week_number': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'e.g., 1-52'}),
             'quarter_number': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'e.g., 1-4'}),
         }
 
     def clean(self):
         cleaned_data = super().clean()
         plan_type = cleaned_data.get('plan_type')
-        week_number = cleaned_data.get('week_number')
-        month = cleaned_data.get('month')
-        quarter_number = cleaned_data.get('quarter_number')
 
-        # Set specific fields to None if they are empty strings
-        if month == '':
+        # Clean up empty strings from ChoiceFields (month is an integer field in model)
+        if cleaned_data.get('month') == '':
             cleaned_data['month'] = None
-        if week_number == '':
-            cleaned_data['week_number'] = None
-        if quarter_number == '':
-            cleaned_data['quarter_number'] = None
+        
+        # Ensure that non-required fields are None if blank, to match the model (especially NumberInputs)
+        for field in ['week_number', 'quarter_number']:
+             if cleaned_data.get(field) == '':
+                cleaned_data[field] = None
 
         # Add validation logic based on the plan type
         if plan_type == 'weekly' and not cleaned_data.get('week_number'):
