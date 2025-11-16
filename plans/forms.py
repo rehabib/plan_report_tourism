@@ -77,9 +77,9 @@ class DetailActivityForm(forms.ModelForm):
     """
     class Meta:
         model = DetailActivity
-        fields = ['description', 'weight', 'budget', 'responsible_person', 'status']
+        fields = ['detail_activity', 'weight', 'budget', 'responsible_person', 'status']
         widgets = {
-            'description': forms.Textarea(attrs={'class': 'w-full px-2 py-1 border rounded-md text-sm', 'placeholder': 'Specific steps/tasks', 'rows': 2}),
+            'detail_activity': forms.Textarea(attrs={'class': 'w-full px-2 py-1 border rounded-md text-sm', 'placeholder': 'Specific steps/tasks', 'rows': 2}),
             'weight': forms.NumberInput(attrs={'class': 'w-full px-2 py-1 border rounded-md text-sm', 'placeholder': 'Weight share'}),
             'budget': forms.NumberInput(attrs={'class': 'w-full px-2 py-1 border rounded-md text-sm', 'placeholder': 'Budget share'}),
             'responsible_person': forms.TextInput(attrs={'class': 'w-full px-2 py-1 border rounded-md text-sm', 'placeholder': 'Responsible'}),
@@ -189,9 +189,9 @@ class MajorActivityForm(forms.ModelForm):
     """
     class Meta:
         model = MajorActivity
-        fields = ['name', 'total_weight', 'budget']
+        fields = ['major_activity', 'total_weight', 'budget']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border rounded-md font-semibold', 'placeholder': 'e.g., Q2 Marketing Campaign'}),
+            'major_activity': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border rounded-md font-semibold', 'placeholder': 'e.g., Q2 Marketing Campaign'}),
             'total_weight': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Total weight for this Major Activity'}),
             'budget': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-md', 'placeholder': 'Total budget (e.g., 5000.00)'}),
         }

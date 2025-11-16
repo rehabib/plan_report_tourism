@@ -1,39 +1,97 @@
+{% load static %}
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Plan and Report System</title>
-<script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan and Report System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-blue-100 min-h-screen font-sans antialiased">
-<header class="bg-white shadow-md py-4 px-6 mb-8">
-<nav class="container mx-auto flex justify-between items-center">
 
-<a href="{% url 'dashboard' %}" class="text-2xl font-bold text-blue-600">Ministry of Tourism</a>
-<img src="plans/images/tourism logo.jpg" 
-                     alt="Tourism Logo" 
-                     class="h-10 w-10 mr-3 object-cover rounded-md shadow-sm">
-<div>
-{% if user.is_authenticated %}
-<span class="text-gray-700 mr-4">Welcome, {{ user.username }}</span>
-<form action="{% url 'logout' %}" method="post" class="inline">
-{% csrf_token %}
-<button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">Logout</button>
-</form>
-{% else %}
-<a href="{% url 'login' %}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">Login</a>
-{% endif %}
-</div>
+<body class="bg-blue-100 min-h-screen font-sans antialiased">
+
+<header class="py-8 px-6 mb-6 bg-cover bg-center bg-[url('{% static "plans/images/ministryoftourism.jpg" %}')]">
+    <div class="container mx-auto">
+
+        <!-- NAV BAR -->
+        <div class="flex justify-between items-center">
+            
+            <!-- Logo + Desktop Title -->
+            <div class="flex items-center">
+                <img src="{% static 'plans/images/tourism logo.jpg' %}"
+                     class="h-10 w-10 mr-2 object-cover rounded-full shadow-sm border-2 border-white">
+
+                <h1 class="hidden md:block text-2xl font-bold text-white">
+                    Ministry of Tourism Plan And Report System
+                </h1>
+            </div>
+
+            <!-- DESKTOP MENU -->
+            <div class="hidden md:flex items-center gap-4">
+                {% if user.is_authenticated %}
+                <span class="text-white mr-4">Welcome, {{ user.username }}</span>
+                <form action="{% url 'logout' %}" method="post" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
+                        Logout
+                    </button>
+                </form>
+                {% else %}
+                <a href="{% url 'login' %}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+                    Login
+                </a>
+                {% endif %}
+            </div>
+
+            <!-- MOBILE MENU BUTTON -->
+            <button id="menu-btn" class="md:hidden text-white text-3xl">
+                ☰
+            </button>
+        </div>
+
+        <!-- MOBILE TITLE -->
+        <h1 class="mt-4 md:hidden text-center text-xl font-bold text-white">
+            Ministry of Tourism Plan And Report System
+        </h1>
+
+        <!-- MOBILE MENU -->
+        <div id="mobile-menu" 
+     class="hidden md:hidden flex-col mt-4 bg-white/20  rounded-lg p-4 text-white">
+
+            {% if user.is_authenticated %}
+            <span class="mb-2">{{ user.username }}</span>
+            <form action="{% url 'logout' %}" method="post">
+                {% csrf_token %}
+                <button class="md:w-auto bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
+                    Logout
+                </button>
+            </form>
+            {% else %}
+            <a href="{% url 'login' %}" class=" md:w-auto bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 text-center">
+                Login
+            </a>
+            {% endif %}
+        </div>
+
+    </div>
 </header>
+
+<!-- MAIN CONTENT -->
 <main class="container mx-auto px-6 py-8">
-{% block content %}
-{% endblock %}
+    {% block content %}
+    {% endblock %}
 </main>
 
-<footer class="mt-12 py-4 text-center text-sm text-gray-500 border-t">
-        &copy; 2025 Ministry of Tourism. All rights reserved.
+<!-- TOGGLE SCRIPT -->
+<script>
+document.getElementById("menu-btn").onclick = function () {
+    document.getElementById("mobile-menu").classList.toggle("hidden");
+};
+</script>
+
+<footer class="mt-6 py-8 px-6 text-left text-white bg-cover bg-center bg-[url('{% static "plans/images/ministryoftourism.jpg" %}')]">
+    &copy; 2025 Ministry of Tourism. All rights reserved.
 </footer>
+
 </body>
 </html>

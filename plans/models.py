@@ -106,88 +106,88 @@ class KPI(models.Model):
 # --- Activity Models (The Focus of the 'Activity Button') ---
 
 class MajorActivity(models.Model):
-    """
-    A high-level activity that holds the total allocated weight and budget, 
-    and acts as a container for DetailActivities.
-    """
-    plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='major_activities', null=True, blank=True)
-    name = models.CharField(max_length=255, verbose_name="Major Activity Name")
-    
-    # Total weight allocated to this major activity (must sum up from detail activities)
-    total_weight = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        help_text="The total weight of this major activity. Detail activities' weights must sum up to this value (e.g., 20.00).",
+    plan = models.ForeignKey(
+        Plan,
+        on_delete=models.CASCADE,
+        related_name='major_activities',
         null=True,
         blank=True
     )
-    
-    # Total budget allocated to this major activity (must sum up from detail activities)
-    budget = models.DecimalField(
-        max_digits=14, # Increased for larger budgets
-        decimal_places=2, 
-        null=True, 
-        blank=True, 
-        help_text="Total budget for this major activity and all its sub-tasks."
+
+    major_activity = models.CharField(
+        max_length=255,
+        verbose_name="Major Activity Name"
     )
 
-    def __str__(self):
-        return f"Major Activity: {self.name} (Plan: {self.plan.id if self.plan else 'N/A'})"
-    
-    # Calculation Properties
-    @property
-    def current_detail_weight(self):
-        """Calculates the sum of weights from all associated DetailActivities."""
-        return self.detail_activities.aggregate(Sum('weight'))['weight__sum'] or 0.00
-    
-    @property
-    def current_detail_budget(self):
-        """Calculates the sum of budgets from all associated DetailActivities."""
-        return self.detail_activities.aggregate(Sum('budget'))['budget__sum'] or 0.00
+    responsible_person = models.CharField(max_length=255)
 
-   
-
-
-class DetailActivity(models.Model):
-    """
-    A smaller, actionable task that belongs to a MajorActivity.
-    Its weight and budget are sub-divisions of the MajorActivity's totals.
-    """
-    major_activity = models.ForeignKey(
-        MajorActivity, 
-        on_delete=models.CASCADE, 
-        related_name='detail_activities',
-        help_text="The major activity this detail activity belongs to."
-    )
-    
-    description = models.TextField(verbose_name="Detail Activity Description")
-    
-    # Weight share of the major activity's total weight
-    weight = models.DecimalField(
+    total_weight = models.DecimalField(
         max_digits=5,
-        decimal_places=2,
-        help_text="Weight share of the Major Activity's total weight."
-    )
-
-    budget = models.DecimalField(
-        max_digits=14, # Increased for consistency with MajorActivity
         decimal_places=2,
         null=True,
         blank=True,
-        help_text="Budget allocated for this detail activity."
+        help_text="Sum of detail activity weights."
     )
-    
+
+    budget = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Sum of detail activity budgets."
+    )
+
+    def __str__(self):
+        return f"Major Activity: {self.major_activity} (Plan: {self.plan.id if self.plan else 'N/A'})"
+
+    @property
+    def current_detail_weight(self):
+        return self.detail_activities.aggregate(Sum('weight'))['weight__sum'] or 0.00
+
+    @property
+    def current_detail_budget(self):
+        return self.detail_activities.aggregate(Sum('budget'))['budget__sum'] or 0.00
+
+
+
+class DetailActivity(models.Model):
+    major_activity = models.ForeignKey(
+        MajorActivity,
+        on_delete=models.CASCADE,
+        related_name='detail_activities'
+    )
+
+    detail_activity = models.TextField(
+        verbose_name="Detail Activity Description"
+    )
+
+    weight = models.DecimalField(
+        max_digits=5,
+        decimal_places=2
+    )
+
+    budget = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+
     responsible_person = models.CharField(max_length=255)
 
     status = models.CharField(
         max_length=20,
-        choices=[("PENDING", "Pending"), ("IN_PROGRESS", "In Progress"), ("COMPLETED", "Completed")],
+        choices=[
+            ("PENDING", "Pending"),
+            ("IN_PROGRESS", "In Progress"),
+            ("COMPLETED", "Completed")
+        ],
         default="PENDING"
     )
 
     def __str__(self):
-        return f"Detail: {self.description[:50]}... (Major: {self.major_activity.name})"
-    
+        return f"Detail: {self.detail_activity[:50]}... (Major: {self.major_activity.major_activity})"
+
     class Meta:
         verbose_name_plural = "Detail Activities"
         ordering = ['major_activity', 'weight']
