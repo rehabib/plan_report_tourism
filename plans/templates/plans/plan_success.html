@@ -1,38 +1,64 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Plan Created Successfully</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-body {
-font-family: 'Inter', sans-serif;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan Created Successfully</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Import Inter font and apply to body */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
-<div class="bg-white p-8 rounded-lg shadow-xl max-w-lg w-full text-center">
-<div class="flex items-center justify-center mb-4">
-<svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-</svg>
-</div>
-<h1 class="text-3xl font-bold text-gray-800 mb-2">Plan Created!</h1>
-<p class="text-gray-600 mb-6">Your plan has been saved successfully. What would you like to do next?</p>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
+    <!-- Success Card Container -->
+    <div class="bg-white p-8 sm:p-10 rounded-2xl shadow-2xl max-w-md w-full text-center border border-green-100">
+        
+        <!-- Success Icon -->
+        <div class="flex items-center justify-center mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-green-500 bg-green-50 p-2 rounded-full" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        </div>
 
-    <div class="flex flex-col sm:flex-row justify-center gap-4">
-        <!-- Corrected URL tag from 'pk=plan_id' to 'plan_id=plan_id' -->
-        <a href="{% url 'view_plan' plan_id=plan_id %}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-full transition duration-300 ease-in-out transform hover:scale-105 shadow-lg">
-            View Plan
-        </a>
-        <a href="{% url 'dashboard' %}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-3 px-6 rounded-full transition duration-300 ease-in-out transform hover:scale-105 shadow-lg">
-            Go to Dashboard
-        </a>
+        <!-- Title and Message -->
+        <h1 class="text-3xl font-extrabold text-gray-900 mb-3">
+            Plan Created!
+        </h1>
+        <p class="text-gray-600 mb-8 text-lg">
+            Your planning artifact has been saved successfully and is ready for execution.
+        </p>
+
+        <!-- Action Buttons (Responsive Layout) -->
+        <div class="flex flex-col sm:flex-row justify-center gap-4">
+            <!-- Button 1: View Plan -->
+            <!-- Note: The Django URL tag is kept as provided by the user -->
+            <a href="{% url 'view_plan' plan_id=plan_id %}" 
+               class="w-full sm:w-auto cursor-pointer 
+                      bg-blue-600 hover:bg-blue-700 text-white font-semibold 
+                      py-3 px-8 rounded-xl 
+                      transition duration-300 ease-in-out transform hover:scale-[1.02] 
+                      shadow-lg shadow-blue-200 
+                      focus:outline-none focus:ring-4 focus:ring-blue-300">
+                View Plan Details
+            </a>
+            
+            <!-- Button 2: Go to Dashboard -->
+            <a href="{% url 'dashboard' %}" 
+               class="w-full sm:w-auto cursor-pointer 
+                      bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold 
+                      py-3 px-8 rounded-xl 
+                      transition duration-300 ease-in-out transform hover:scale-[1.02] 
+                      shadow-md 
+                      focus:outline-none focus:ring-4 focus:ring-gray-300">
+                Go to Dashboard
+            </a>
+        </div>
     </div>
-</div>
-
 </body>
 </html>

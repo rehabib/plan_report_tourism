@@ -6,7 +6,6 @@
     <div class="flex flex-col md:flex-row justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-blue-600 mb-4 md:mb-0">Your Plans Dashboard</h1>
 
-        <!-- Filter and Create Buttons -->
         <div class="flex flex-wrap items-center space-y-4 md:space-y-0 md:space-x-4">
 
             {% if user_role == 'corporate' %}
@@ -17,7 +16,6 @@
                         All Departments
                     </option>
                     {% for department in all_departments %}
-                    <!-- FINAL FIX: Added crucial spaces around the '==' operator -->
                     <option value="{% url 'dashboard' %}?department={{ department }}" {% if department == selected_department %}selected{% endif %}>
                         {{ department|capfirst }}
                     </option>
@@ -45,7 +43,6 @@
         </div>
     </div>
 
-    <!-- Plans Table Section -->
     <div class="bg-white p-6 rounded-lg shadow-lg">
         <h2 class="text-2xl font-bold text-gray-700 mb-4">Plans and Reports</h2>
 
@@ -60,6 +57,7 @@
                         <th scope="col" class="px-6 py-3">Year</th>
                         <th scope="col" class="px-6 py-3">Period</th>
                         <th scope="col" class="px-6 py-3">Creator</th>
+                        <th scope="col" class="px-6 py-3 text-right">Total Budget</th> 
                         <th scope="col" class="px-6 py-3 text-right">Actions</th>
                     </tr>
                 </thead>
@@ -79,7 +77,6 @@
                         <td class="px-6 py-4">{{ plan.get_plan_type_display }}</td>
                         <td class="px-6 py-4">{{ plan.year }}</td>
                         <td class="px-6 py-4">
-                            <!-- Corrected logic for period display -->
                             {% if plan.plan_type == 'monthly' %}
                                 {{ plan.get_month_display }}
                             {% elif plan.plan_type == 'quarterly' %}
@@ -91,13 +88,21 @@
                             {% endif %}
                         </td>
                         <td class="px-6 py-4">{{ plan.user.username }}</td>
+                        
+                        <td class="px-6 py-4 text-right font-bold text-gray-800">
+                            {% if plan.total_budget %}
+                                ${{ plan.total_budget|floatformat:2 }}
+                            {% else %}
+                                $0.00
+                            {% endif %}
+                        </td>
+
                         <td class="px-6 py-4 text-right space-x-2">
                             <a href="{% url 'view_plan' plan.pk %}"
                                 class="font-medium text-blue-600 hover:underline">View</a>
                             {% if user.is_authenticated and plan.user == request.user and plan.status != 'APPROVED' %}
                             <a href="{% url 'edit_plan' plan.pk %}"
                                 class="font-medium text-green-600 hover:underline">Edit</a>
-                            <!-- Use a data attribute to store the form action URL -->
                             <button type="button" class="font-medium text-red-600 hover:underline delete-button"
                                 data-delete-url="{% url 'delete_plan' plan.pk %}">Delete</button>
                             {% endif %}
@@ -113,7 +118,6 @@
     </div>
 </div>
 
-<!-- Delete Confirmation Modal (initially hidden) -->
 <div id="delete-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50">
     <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4 text-center">
         <h3 class="text-xl font-bold mb-4 text-gray-900">Confirm Deletion</h3>

@@ -1,29 +1,19 @@
 from django.contrib import admin
+from django.db.models import Sum
 from .models import Plan, StrategicGoal, KPI, MajorActivity, DetailActivity
 
-# --- Import custom forms and formsets for validation ---
-# We need to import the custom form and formset class to enforce the budget/weight constraints
-from .forms import DetailActivityForm, BaseDetailActivityFormSet
+
 
 # --- 1. Detail Activity Inline (Lowest Level) ---
 
 class DetailActivityInline(admin.TabularInline):
-    """
-    Inline for managing DetailActivity models within a MajorActivity.
-    
-    CRUCIAL: We assign the custom form and formset here to enable the 
-    weight/budget sum validation upon saving the MajorActivity.
-    """
     model = DetailActivity
     extra = 1
-    # ASSIGN CUSTOM FORM and FORMSET for complex validation
-    form = DetailActivityForm 
-    formset = BaseDetailActivityFormSet 
-    
+    max_num = 10
+
     fields = [
-        'description',  
+        'detail_activity',  
         'weight',  
-        'budget',  # <-- FIX: Added the missing budget field
         'responsible_person',  
         'status'
     ]
@@ -38,11 +28,28 @@ class MajorActivityInline(admin.StackedInline):
     """
     model = MajorActivity
     extra = 1
-    fields = [
-        'name',  
-        'total_weight',  
-        'budget'
+    # fields = [
+    #     'major_activity',  
+    #     'budget',  
+    #     'responsible_person'
+      
+    # ]
+
+    # Fields that are calculated properties and should only be displayed (read-only)
+    readonly_fields = [
+        'total_weight', 
     ]
+
+    # Group the editable fields and the read-only calculated field for a nice display
+    fieldsets = (
+        (None, {
+            'fields': (
+                ('major_activity', 'responsible_person'),
+                ('budget', 'total_weight'), # Display budget next to its calculated weight
+            ),
+        }),
+    )
+
     # NESTED INLINE: Include Detail Activities here
     inlines = [DetailActivityInline]
 
@@ -86,7 +93,7 @@ class PlanAdmin(admin.ModelAdmin):
         "plan_type",
         "year",
         "status",
-        "total_budget", 
+        "get_total_budget", 
         "created_at",
     )
     list_display_links = ("__str__",)
@@ -97,7 +104,12 @@ class PlanAdmin(admin.ModelAdmin):
     inlines = [StrategicGoalInline, KPIInline, MajorActivityInline]  
     
     date_hierarchy = "created_at"
-
+    
+    # This calls the @property method on the Plan model
+    def get_total_budget(self, obj):
+        return obj.total_budget
+    get_total_budget.short_description = 'Total Budget'
+    get_total_budget.admin_order_field = 'major_activities__budget'
 # Register remaining models to be visible in the Admin interface (optional but good practice)
 admin.site.register(StrategicGoal)
 admin.site.register(KPI)

@@ -52,14 +52,13 @@
                         {{ goal_form.DELETE }}
                         <div class="flex items-center space-x-4">
                             <div class="flex-grow">
-                                {{ goal_form.title.label_tag }}
-                                {{ goal_form.title }}
+                                {{ goal_form.title.label_tag }}{{ goal_form.title }}
                             </div>
                             <button type="button" class="remove-form-btn bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition duration-150 self-end" data-form-type="goal">
                                 Remove
                             </button>
                         </div>
-                        {% if goal_form.errors %}{{ goal_form.errors }}{% endif %}
+                        {% if goal_form.errors %}<div class="text-red-500 text-sm mt-1">{{ goal_form.errors|join:", " }}</div>{% endif %}
                     </div>
                 {% endfor %}
             </div>
@@ -84,12 +83,12 @@
                             <div>{{ kpi_form.name.label_tag }}{{ kpi_form.name }}</div>
                             <div>{{ kpi_form.baseline.label_tag }}{{ kpi_form.baseline }}</div>
                             <div>{{ kpi_form.target.label_tag }}{{ kpi_form.target }}</div>
-                            {# Include other KPI fields here (Q1, Q2, etc.) if they exist in your formset #}
+                            {# Include other KPI fields here #}
                         </div>
                         <button type="button" class="remove-form-btn bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition duration-150 mt-4" data-form-type="kpi">
                             Remove
                         </button>
-                        {% if kpi_form.errors %}{{ kpi_form.errors }}{% endif %}
+                        {% if kpi_form.errors %}<div class="text-red-500 text-sm mt-1">{{ kpi_form.errors|join:", " }}</div>{% endif %}
                     </div>
                 {% endfor %}
             </div>
@@ -107,9 +106,11 @@
             {{ major_activity_formset.management_form }}
             <div id="major_activities-container" class="space-y-6 mb-8">
                 {% for major_form in major_activity_formset %}
-                    <div class="major_activities-form form-row p-4 border rounded-lg shadow-inner bg-yellow-50" 
-                         data-form-type="major_activities" 
-                         data-prefix="{{ major_activity_formset.prefix }}-{{ forloop.counter0 }}">
+                    {# CRITICAL: major_activity_set is the default name for the FK relation, update the prefix accordingly #}
+                    <div class="major_activities-form form-row p-4 border rounded-lg shadow-inner bg-yellow-50 {% if major_form.instance.pk and major_form.DELETE.value %}deleted-form{% endif %}" 
+                          data-form-type="major_activities" 
+                          data-form-index="{{ forloop.counter0 }}"
+                          data-prefix="{{ major_activity_formset.prefix }}-{{ forloop.counter0 }}">
 
                         <h3 class="text-xl font-semibold mb-3 text-yellow-800 flex justify-between items-center">
                             Major Activity #<span class="form-number">{{ forloop.counter }}</span>
@@ -133,6 +134,9 @@
                             <div>
                                 {{ major_form.budget.label_tag }}{{ major_form.budget }}
                             </div>
+                             <div class="md:col-span-1">
+                                {{ major_form.responsible_person.label_tag }}{{ major_form.responsible_person }}
+                            </div>
                         </div>
                         {% if major_form.errors %}<div class="text-red-500 text-sm mt-1">{{ major_form.errors|join:", " }}</div>{% endif %}
 
@@ -140,20 +144,24 @@
                         <div class="nested-formset-container border-t pt-3 mt-4">
                             <h4 class="text-md font-medium mb-3 text-yellow-800">Sub-Tasks (Detail Activities)</h4>
                             
+                            {# The Detail Activities container ID MUST use the Major Activity's prefix for JS targeting #}
                             <div class="detail_activities-container space-y-3" id="detail_activities-{{ major_activity_formset.prefix }}-{{ forloop.counter0 }}-container">
+                                
                                 {% with detail_formset=detail_activity_formset|make_detail_formset:major_form.instance %}
                                     {# CRITICAL: Management form for the nested formset #}
-                                    {{ detail_formset.management_form }}
+                                    {# This needs to be custom rendered to apply the correct prefix based on the parent #}
+                                    {% include 'plans/_nested_management_form.html' with formset=detail_formset parent_formset_prefix=major_activity_formset.prefix parent_index=forloop.counter0 %}
                                     
                                     {% for detail_form in detail_formset %}
-                                        {% include '_detail_activity_form.html' with form=detail_form parent_prefix=major_activity_formset.prefix form_index=forloop.counter0 parent_index=forloop.parentloop.counter0 %}
+                                        {# Passes the current major form's index for correct naming #}
+                                        {% include '_detail_activity_form.html' with form=detail_form parent_prefix=major_activity_formset.prefix parent_index=forloop.counter0 form_index=forloop.counter0 %}
                                     {% endfor %}
                                 {% endwith %}
                             </div>
                             
                             <button type="button" class="add-nested-form-btn mt-3 px-3 py-1 bg-yellow-600 text-white rounded-md text-sm hover:bg-yellow-700" 
-                                    data-parent-prefix="{{ major_activity_formset.prefix }}-{{ forloop.counter0 }}" 
-                                    data-nested-prefix="detail_activities">
+                                     data-parent-prefix="{{ major_activity_formset.prefix }}-{{ forloop.counter0 }}" 
+                                     data-nested-prefix="detail_activities">
                                 + Add Sub-Task
                             </button>
                         </div>
@@ -180,19 +188,46 @@
 
 {# ------------------------ TEMPLATES FOR CLONING ------------------------ #}
 
+{# Empty Goal Form Template (Assuming it exists and is correct) #}
 <template id="empty-goal-form">
-    {# ... (Keep your original empty-goal-form template) ... #}
+    <div class="goal-form form-row p-4 border rounded-lg bg-gray-50 shadow-sm" data-form-type="goal">
+        <h4 class="font-medium text-lg text-gray-700 mb-2">Goal #<span class="form-number"></span></h4>
+        {{ goal_formset.empty_form.id }}
+        {{ goal_formset.empty_form.DELETE }}
+        <div class="flex items-center space-x-4">
+            <div class="flex-grow">
+                {{ goal_formset.empty_form.title.label_tag }}{{ goal_formset.empty_form.title }}
+            </div>
+            <button type="button" class="remove-form-btn bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition duration-150 self-end" data-form-type="goal">
+                Remove
+            </button>
+        </div>
+    </div>
 </template>
 
+{# Empty KPI Form Template #}
 <template id="empty-kpi-form">
-    {# ... (Keep your original empty-kpi-form template) ... #}
+    <div class="kpi-form form-row p-4 border rounded-lg bg-gray-50 shadow-sm" data-form-type="kpi">
+        <h4 class="font-medium text-lg text-gray-700 mb-2">KPI #<span class="form-number"></span></h4>
+        {{ kpi_formset.empty_form.id }}
+        {{ kpi_formset.empty_form.DELETE }}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>{{ kpi_formset.empty_form.name.label_tag }}{{ kpi_formset.empty_form.name }}</div>
+            <div>{{ kpi_formset.empty_form.baseline.label_tag }}{{ kpi_formset.empty_form.baseline }}</div>
+            <div>{{ kpi_formset.empty_form.target.label_tag }}{{ kpi_formset.empty_form.target }}</div>
+        </div>
+        <button type="button" class="remove-form-btn bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition duration-150 mt-4" data-form-type="kpi">
+            Remove
+        </button>
+    </div>
 </template>
 
 {# NEW TEMPLATE FOR MAJOR ACTIVITY (Level 2) #}
 <template id="empty-major_activities-form">
     <div class="major_activities-form form-row p-4 border rounded-lg shadow-inner bg-yellow-50" 
-         data-form-type="major_activities" 
-         data-prefix="major_activities-__prefix__">
+          data-form-type="major_activities" 
+          data-form-index="__prefix__"
+          data-prefix="major_activities-__prefix__">
 
         <h3 class="text-xl font-semibold mb-3 text-yellow-800 flex justify-between items-center">
             Major Activity #<span class="form-number"></span>
@@ -215,6 +250,9 @@
             <div>
                 {{ major_activity_formset.empty_form.budget.label_tag }}{{ major_activity_formset.empty_form.budget }}
             </div>
+             <div class="md:col-span-1">
+                {{ major_activity_formset.empty_form.responsible_person.label_tag }}{{ major_activity_formset.empty_form.responsible_person }}
+            </div>
         </div>
 
         {# CRITICAL: Nested Detail Activity Management Form (prefixed for JS) #}
@@ -222,10 +260,10 @@
             <h4 class="text-md font-medium mb-3 text-yellow-800">Sub-Tasks (Detail Activities)</h4>
             
             <div class="detail_activities-container space-y-3" id="detail_activities-major_activities-__prefix__-container">
-                {# Render the EMPTY DetailActivityFormset's management form, explicitly prefixed for JS cloning #}
+                {# Include the custom management form for the empty detail formset #}
                 {% with nested_prefix='detail_activities-major_activities-__prefix__' %}
                     {% for field in detail_activity_formset.empty_form.management_form %}
-                        <input type="{{ field.widget_type }}" name="{{ nested_prefix }}-{{ field.name|cut:'detail_activity_set-' }}" id="{{ nested_prefix }}-{{ field.name|cut:'detail_activity_set-' }}" value="{{ field.value|default:'' }}" {{ field.field.widget.attrs|join:' ' }}>
+                        <input type="{{ field.widget_type }}" name="{{ nested_prefix }}-{{ field.name|cut:'detail_activity_set-' }}" id="{{ nested_prefix }}-{{ field.name|cut:'detail_activity_set-' }}" value="{{ field.value|default:'' }}" class="hidden">
                     {% endfor %}
                 {% endwith %}
             </div>
@@ -241,25 +279,12 @@
 
 {# NEW TEMPLATE FOR DETAIL ACTIVITY (Level 3) #}
 <template id="empty-detail_activities-form">
-    {# Include the partial template for the nested form #}
-    {% include '_detail_activity_form.html' with form=detail_activity_formset.empty_form parent_prefix='major_activities-__parent_prefix__' form_index='__prefix__' parent_index='__parent_index__' %}
+    {# Include the partial template for the nested form. 
+       Note the use of the double-underscore prefix for JS replacement. #}
+    {% include '_detail_activity_form.html' with form=detail_activity_formset.empty_form parent_prefix='major_activities-__parent_prefix__' parent_index='__parent_index__' form_index='__prefix__' %}
 </template>
 
-<template id="empty-kpi-form">
-    {# ... (Keep your original empty-kpi-form template) ... #}
-</template>
 
-{# NEW TEMPLATE FOR MAJOR ACTIVITY (Level 2) #}
-<template id="empty-major_activities-form">
-    {# ... (Major Activity template code) ... #}
-</template>
-
-{# NEW TEMPLATE FOR DETAIL ACTIVITY (Level 3) #}
-<template id="empty-detail_activities-form">
-    {% include '_detail_activity_form.html' with form=detail_activity_formset.empty_form parent_prefix='major_activities-__parent_prefix__' form_index='__prefix__' parent_index='__parent_index__' %}
-</template>
-
-{# START OF YOUR ORIGINAL STYLE BLOCK (Missing in previous response snippet) #}
 <style>
     /* Styling for the main form fields */
     input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]), textarea, select {
@@ -270,17 +295,16 @@
         opacity: 0.5;
         background-color: #fef2f2; /* bg-red-50 */
         border-color: #fca5a5; /* border-red-300 */
-        pointer-events: auto; /* Ensure buttons still work */
+        pointer-events: auto;
     }
 </style>
-{# END OF STYLE BLOCK #}
 
 
 <script>
     // Note: This script is modified to incorporate the nested formset logic.
     document.addEventListener('DOMContentLoaded', function() {
         
-        // --- Core Formset Manager (UNCHANGED) ---
+        // --- Core Formset Manager (Handles top-level formsets: Goal, KPI, MajorActivity) ---
         function FormsetManager(containerId, addBtnId, emptyFormTemplateId, prefix, formClass) {
             
             const container = document.getElementById(containerId);
@@ -293,32 +317,23 @@
                 let visibleCount = 0;
                 
                 forms.forEach((form) => {
-                    // Only count forms that are NOT marked for deletion
-                    if (form.style.display !== 'none' && !form.classList.contains('deleted-form')) {
+                    // Only count forms that are NOT marked for deletion and are visible
+                    if (form.style.display !== 'none' && !form.querySelector('input[name$="-DELETE"]:checked')) {
                         visibleCount++;
                         const numberSpan = form.querySelector('.form-number');
-                        const header = form.querySelector('h3, h4');
-
                         if (numberSpan) {
                             numberSpan.textContent = visibleCount;
-                        }
-                        if (header) {
-                            // Update the entire header text to ensure "Major Activity #X" updates correctly
-                            let currentText = header.textContent.trim().split('#')[0];
-                            let numberSpanElement = header.querySelector('.form-number');
-                            if (numberSpanElement) {
-                                numberSpanElement.textContent = visibleCount;
-                            }
                         }
                     }
                 });
             }
 
+            // Initialize: Hide forms marked for deletion and update numbers
             container.querySelectorAll('.form-row').forEach(form => {
                  const deleteInput = form.querySelector('input[type="checkbox"][name$="-DELETE"]');
                  if (deleteInput && deleteInput.checked) {
-                    form.style.display = 'none'; // Hide initially deleted forms
-                    form.classList.add('deleted-form');
+                     form.style.display = 'none'; // Hide initially deleted forms
+                     form.classList.add('deleted-form');
                  }
             });
             updateFormNumbers();
@@ -333,13 +348,19 @@
                 
                 newForm.classList.add('form-row');
                 newForm.setAttribute('data-form-type', formClass);
+                
+                // CRITICAL: Set the data-form-index for the new Major Activity form
+                if (formClass === 'major_activities-form') {
+                    newForm.setAttribute('data-form-index', currentCount);
+                }
 
                 container.appendChild(newForm);
 
                 totalFormsInput.value = currentCount + 1;
                 
+                // Clear inputs
                 newForm.querySelectorAll('input:not([type="hidden"]):not([type="checkbox"]), textarea, select').forEach(input => {
-                    input.value = '';
+                     input.value = '';
                 });
 
                 updateFormNumbers();
@@ -354,14 +375,16 @@
                     const deleteInput = form.querySelector('input[type="checkbox"][name$="-DELETE"]');
 
                     if (idInput && idInput.value) {
+                        // Existing form: mark for deletion
                         if (deleteInput) {
                             deleteInput.checked = true;
                         }
                         form.style.display = 'none';
                         form.classList.add('deleted-form');
                     } else {
+                        // New form: remove entirely
                         form.remove();
-                        totalFormsInput.value = parseInt(totalFormsInput.value) - 1;
+                        // totalFormsInput.value = parseInt(totalFormsInput.value) - 1; // Not needed if we only remove the form, not changing the TOTAL_FORMS count for submission.
                     }
                     
                     updateFormNumbers();
@@ -370,12 +393,15 @@
         }
         // --- END Core Formset Manager ---
 
-        // --- Nested Formset Manager Logic ---
+        // --- Nested Formset Manager Logic (Handles DetailActivity) ---
         document.addEventListener('click', function(e) {
             if (e.target.classList.contains('add-nested-form-btn')) {
                 const parentPrefix = e.target.getAttribute('data-parent-prefix'); // e.g., major_activities-0
                 const nestedPrefix = e.target.getAttribute('data-nested-prefix'); // e.g., detail_activities
                 
+                // Get the parent form index (e.g., '0' from 'major_activities-0')
+                const parentIndex = parentPrefix.split('-').pop();
+
                 const detailContainerId = `${nestedPrefix}-${parentPrefix}-container`;
                 const $detailContainer = document.getElementById(detailContainerId);
                 
@@ -387,11 +413,10 @@
                 // 1. Get the empty form HTML and replace placeholders
                 let newFormHtml = document.getElementById(`empty-${nestedPrefix}-form`).innerHTML;
                 
-                // Replace the form index (__prefix__)
+                // Replace the form index (__prefix__) and parent index (__parent_index__)
                 newFormHtml = newFormHtml.replace(new RegExp('__prefix__', 'g'), currentCount);
-                
-                // Replace the parent prefix (__parent_prefix__)
                 newFormHtml = newFormHtml.replace(new RegExp('__parent_prefix__', 'g'), parentPrefix);
+                newFormHtml = newFormHtml.replace(new RegExp('__parent_index__', 'g'), parentIndex);
 
                 // Create and append the new form
                 const newFormDiv = document.createElement('div');
@@ -410,25 +435,42 @@
             }
         });
 
+        // Event listener for removing nested Detail Activities
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-nested-form-btn')) {
+                const form = e.target.closest('.detail_activities-form');
+                if (!form) return;
+
+                const idInput = form.querySelector('input[name$="-id"]');
+                const deleteInput = form.querySelector('input[type="checkbox"][name$="-DELETE"]');
+
+                if (idInput && idInput.value) {
+                    // Existing form: mark for deletion
+                    if (deleteInput) {
+                        deleteInput.checked = true;
+                    }
+                    form.style.display = 'none';
+                    form.classList.add('deleted-form');
+                } else {
+                    // New form: remove entirely
+                    form.remove();
+                    // NOTE: Unlike the top-level formset, we generally don't decrement TOTAL_FORMS here,
+                    // as Django's management handles deletion on submit based on the DELETE checkbox.
+                }
+            }
+        });
+
+
         // Initialize top-level Formset Managers
         new FormsetManager('goals-container', 'add-goal-btn', 'empty-goal-form', '{{ goal_formset.prefix }}', 'goal-form');
         new FormsetManager('kpis-container', 'add-kpi-btn', 'empty-kpi-form', '{{ kpi_formset.prefix }}', 'kpi-form');
-        
-        // Initialize Major Activities (The outer part of the nested formset)
         new FormsetManager('major_activities-container', 'add-major_activities-btn', 'empty-major_activities-form', '{{ major_activity_formset.prefix }}', 'major_activities-form');
         
-        // Add basic Tailwind class to the main form fields for consistency (Keep your original code)
+        // Apply basic Tailwind class to the main form fields for consistency
         document.querySelectorAll('#plan-form input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="submit"]), #plan-form textarea, #plan-form select').forEach(input => {
              if (!input.classList.contains('border')) {
                  input.classList.add('block', 'w-full', 'px-3', 'py-2', 'border', 'border-gray-300', 'rounded-md', 'focus:ring-indigo-500', 'focus:border-indigo-500');
              }
-        });
-
-        // Initialize deletion styles for existing forms (Keep your original code)
-        document.querySelectorAll('.form-row input[type="checkbox"][name$="-DELETE"]').forEach(deleteInput => {
-            if (deleteInput.checked) {
-                deleteInput.closest('.form-row').classList.add('deleted-form');
-            }
         });
 
     });
