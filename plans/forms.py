@@ -122,23 +122,23 @@ class KPIForm(forms.ModelForm):
                 q_values = [cleaned_data.get(f) for f in q_fields]
 
             # --- Check 2: Progressive Target Validation (Q1 <= Q2 <= Q3 <= Q4) ---
-            if all(q is not None for q in q_values):
-                if not (q_values[0] <= q_values[1] <= q_values[2] <= q_values[3]):
-                    raise forms.ValidationError(
-                        "Quarterly targets must be progressive (non-decreasing): Q1 ≤ Q2 ≤ Q3 ≤ Q4."
-                    )
+            # if all(q is not None for q in q_values):
+            #     if not (q_values[0] <= q_values[1] <= q_values[2] <= q_values[3]):
+            #         raise forms.ValidationError(
+            #             "Quarterly targets must be progressive (non-decreasing): Q1 ≤ Q2 ≤ Q3 ≤ Q4."
+            #         )
                 
                 # --- Check 3: Total Target must equal Q4 Target ---
-                q4_target = q_values[3]
+                q4_target = q_values[0]+ q_values[1]+ q_values[2] + q_values[3] 
                 
                 if yearly_target is None:
                     self.add_error('target', "Total target is required for a Yearly Plan.")
                 
                 # Check within a small tolerance for floating point numbers
-                elif abs(yearly_target - q4_target) > 0.001: 
-                     self.add_error('target', 
-                         f"Target Mismatch: The Total Target ({yearly_target}) must exactly equal the Q4 Target ({q4_target}) for progressive metrics."
-                        )
+                # elif abs(yearly_target - q4_target) > 0.001: 
+                #      self.add_error('target', 
+                #          f"Target Mismatch: The Total Target ({yearly_target}) must exactly equal the Q4 Target ({q4_target}) for progressive metrics."
+                #         )
 
         return cleaned_data    
 KPIFormset = inlineformset_factory(Plan, KPI, form=KPIForm, extra=1, can_delete=True)
@@ -154,11 +154,12 @@ class MajorActivityForm(forms.ModelForm):
     class Meta:
         model = MajorActivity
         # *** CORRECTED: Removed calculated properties (total_weight, total_budget) ***
-        fields = ['major_activity', 'budget', 'responsible_person'] 
+        fields = ['major_activity','weight', 'budget', 'responsible_person'] 
 
         widgets = {
             'major_activity': forms.TextInput(attrs={'class': INPUT_CLASS, 'placeholder': 'Major Activity Title'}),
             # Budget is the editable field
+            'weight': forms.NumberInput(attrs={'class': INPUT_CLASS, 'placeholder': 'Weight (e.g., 25.00)'}), 
             'budget': forms.NumberInput(attrs={'class': INPUT_CLASS, 'placeholder': 'Allocated Budget'}), 
             'responsible_person': forms.Select(attrs={'class': INPUT_CLASS}), # Use Select for ForeignKey
         }

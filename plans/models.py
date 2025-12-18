@@ -7,8 +7,11 @@ from django.db.models import Sum
 class Plan(models.Model):
     LEVEL_CHOICES = [
         ("individual", "Individual"),
+        ("desk", "Desk"),
         ("department", "Department"),
+        ("md", "MD"),
         ("corporate", "Corporate"),
+        ("strategic-team", "Strategic Team")
     ]
 
     PLAN_TYPE_CHOICES = [
@@ -104,7 +107,7 @@ class MajorActivity(models.Model):
     )
 
     major_activity = models.CharField(max_length=255)
-    
+    weight = models.DecimalField(max_digits=5, decimal_places=2)
     budget = models.DecimalField(
     max_digits=10, 
     decimal_places=2, 
@@ -139,7 +142,6 @@ class DetailActivity(models.Model):
 
     detail_activity = models.TextField()
     weight = models.DecimalField(max_digits=5, decimal_places=2)  
-
     responsible_person = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

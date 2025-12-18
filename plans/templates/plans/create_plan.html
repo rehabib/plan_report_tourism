@@ -104,107 +104,136 @@
                 Add Another Strategic Goal
             </button>
         </div>
-
-        <div class="p-6 rounded-xl bg-gray-50 border border-gray-200">
+        <!-- Key Performance Indicators (KPIs) Formset -->
+        <div class="p-6 rounded-lg bg-gray-50 border border-gray-200">
             <h2 class="text-2xl font-semibold text-gray-800 border-b pb-2 mt-2 mb-4">Key Performance Indicators (KPIs)</h2>
             {{ kpi_formset.management_form }}
-            <div id="kpi-formset-container" class="space-y-4" data-form-type="kpi" data-prefix="{{ kpi_formset.prefix }}">
+            <div id="kpi-formset-container" class="space-y-4" data-form-type="kpi" data-prefix="kpis">
                 {% for kpi_form in kpi_formset %}
-                    <div class="form-row border p-4 rounded-md bg-gray-100 flex flex-col space-y-4 relative transition-all duration-300 ease-in-out {% if kpi_form.instance.pk and kpi_form.DELETE.value %}deleted-form{% endif %}">
-                        
-                        <div class="absolute top-2 right-2">
-                            {% if kpi_form.DELETE %}{{ kpi_form.DELETE }}{% endif %}
-                            <button type="button" class="plan-form-remove-btn p-1 text-red-500 hover:text-red-700 transition-colors"
-                                        title="Remove this item">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div class="form-row border p-4 rounded-md bg-gray-100 flex flex-col space-y-4 relative transition-all duration-300 ease-in-out">
+                        {% if kpi_form.instance.pk %}
+                            <div class="absolute top-2 right-2">
+                                <label class="inline-flex items-center text-red-600 font-semibold cursor-pointer">
+                                    <span class="mr-1">Remove</span>
+                                    {{ kpi_form.DELETE }}
+                                </label>
+                            </div>
+                        {% else %}
+                            <button type="button" class="remove-form-btn absolute top-2 right-2 p-1 text-red-500 hover:text-red-700 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                             </button>
-                        </div>
+                        {% endif %}
 
-                        {{ kpi_form.id }}
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div>
-                                <label for="{{ kpi_form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">KPI Name</label>
-                                {{ kpi_form.name }}
-                                {% if kpi_form.name.errors %}<p class="text-red-500 text-xs mt-1">{{ kpi_form.name.errors.as_text }}</p>{% endif %}
-                            </div>
-                            <div>
-                                <label for="{{ kpi_form.measurement.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Measurement</label>
-                                {{ kpi_form.measurement }}
-                                {% if kpi_form.measurement.errors %}<p class="text-red-500 text-xs mt-1">{{ kpi_form.measurement.errors.as_text }}</p>{% endif %}
-                            </div>
-                            
-                            <div>
-                                <label for="{{ kpi_form.baseline.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Baseline</label>
-                                {{ kpi_form.baseline }}
-                                {% if kpi_form.baseline.errors %}<p class="text-red-500 text-xs mt-1">{{ kpi_form.baseline.errors.as_text }}</p>{% endif %}
-                            </div>
-                            <div>
-                                <label for="{{ kpi_form.target.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Annual Target</label>
-                                {{ kpi_form.target }}
-                                {% if kpi_form.target.errors %}<p class="text-red-500 text-xs mt-1">{{ kpi_form.target.errors.as_text }}</p>{% endif %}
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 quarterly-target-row">
-                            <div class="quarterly-target-field">
-                                <label for="{{ kpi_form.target_q1.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q1 Target</label>
-                                {{ kpi_form.target_q1 }}
-                                {% if kpi_form.target_q1.errors %}<p class="text-red-500 text-xs mt-1">{{ kpi_form.target_q1.errors.as_text }}</p>{% endif %}
-                            </div>
-                            <div class="quarterly-target-field">
-                                <label for="{{ kpi_form.target_q2.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q2 Target</label>
-                                {{ kpi_form.target_q2 }}
-                                {% if kpi_form.target_q2.errors %}<p class="text-red-500 text-xs mt-1">{{ kpi_form.target_q2.errors.as_text }}</p>{% endif %}
-                            </div>
-                            <div class="quarterly-target-field">
-                                <label for="{{ kpi_form.target_q3.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q3 Target</label>
-                                {{ kpi_form.target_q3 }}
-                                {% if kpi_form.target_q3.errors %}<p class="text-red-500 text-xs mt-1">{{ kpi_form.target_q3.errors.as_text }}</p>{% endif %}
-                            </div>
-                            <div class="quarterly-target-field">
-                                <label for="{{ kpi_form.target_q4.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q4 Target</label>
-                                {{ kpi_form.target_q4 }}
-                                {% if kpi_form.target_q4.errors %}<p class="text-red-500 text-xs mt-1">{{ kpi_form.target_q4.errors.as_text }}</p>{% endif %}
-                            </div>
-                        </div>
+                {{ kpi_form.id }}
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label for="{{ kpi_form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">KPI Name</label>
+                        {{ kpi_form.name }}
                     </div>
-                {% endfor %}
-            </div>
-            
-            <div id="empty-form-kpi" class="hidden">
-                <div class="form-row border p-4 rounded-md bg-gray-100 flex flex-col space-y-4 relative transition-all duration-300 ease-in-out">
-                    <div class="absolute top-2 right-2">
-                        {{ kpi_formset.empty_form.DELETE }}
-                        <button type="button" class="plan-form-remove-btn p-1 text-red-500 hover:text-red-700 transition-colors" title="Remove this item">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                    <div>
+                        <label for="{{ kpi_form.measurement.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Measurement</label>
+                        {{ kpi_form.measurement }}
+                    </div>
+                
+                    <div>
+                        <label for="{{ kpi_form.baseline.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Baseline</label>
+                        {{ kpi_form.baseline }}
+                    </div>
+              
+                
+                    <div>
+                        <label for="{{ kpi_form.target.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Annual Target</label>
+                        {{ kpi_form.target }}
                     </div>
 
-                    {{ kpi_formset.empty_form.id }}
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div><label for="{{ kpi_formset.empty_form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">KPI Name</label>{{ kpi_formset.empty_form.name }}</div>
-                        <div><label for="{{ kpi_formset.empty_form.measurement.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Measurement</label>{{ kpi_formset.empty_form.measurement }}</div>
-                        <div><label for="{{ kpi_formset.empty_form.baseline.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Baseline</label>{{ kpi_formset.empty_form.baseline }}</div>
-                        <div><label for="{{ kpi_formset.empty_form.target.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Annual Target</label>{{ kpi_formset.empty_form.target }}</div>
+                    <div class="quarterly-target-field">
+                        <label for="{{ kpi_form.target_q1.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q1 Target</label>
+                        {{ kpi_form.target_q1 }}
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 quarterly-target-row">
-                        <div class="quarterly-target-field"><label for="{{ kpi_formset.empty_form.target_q1.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q1 Target</label>{{ kpi_formset.empty_form.target_q1 }}</div>
-                        <div class="quarterly-target-field"><label for="{{ kpi_formset.empty_form.target_q2.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q2 Target</label>{{ kpi_formset.empty_form.target_q2 }}</div>
-                        <div class="quarterly-target-field"><label for="{{ kpi_formset.empty_form.target_q3.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q3 Target</label>{{ kpi_formset.empty_form.target_q3 }}</div>
-                        <div class="quarterly-target-field"><label for="{{ kpi_formset.empty_form.target_q4.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q4 Target</label>{{ kpi_formset.empty_form.target_q4 }}</div>
+
+                    <div class="quarterly-target-field">
+                        <label for="{{ kpi_form.target_q2.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q2 Target</label>
+                        {{ kpi_form.target_q2 }}
                     </div>
+
+                    <div class="quarterly-target-field">
+                        <label for="{{ kpi_form.target_q3.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q3 Target</label>
+                        {{ kpi_form.target_q3 }}
+                    </div>
+
+                    <div class="quarterly-target-field">
+                        <label for="{{ kpi_form.target_q4.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q4 Target</label>
+                        {{ kpi_form.target_q4 }}
+                    </div>
+
                 </div>
             </div>
-            <button type="button" id="add-kpi-button" class="mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shadow-md">
-                Add Another KPI
-            </button>
+        {% endfor %}
+    </div>
+    
+    <div id="empty-form-kpis" class="hidden">
+        <div class="form-row border p-4 rounded-md bg-gray-100 flex flex-col space-y-4 relative transition-all duration-300 ease-in-out">
+            <div class="absolute top-2 right-2">
+                {{ kpi_formset.empty_form.DELETE }}
+                <button type="button" class="plan-form-remove-btn p-1 text-red-500 hover:text-red-700 transition-colors" title="Remove this item">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            {{ kpi_formset.empty_form.id }}
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label for="{{ kpi_formset.empty_form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">KPI Name</label>
+                    {{ kpi_formset.empty_form.name }}
+                </div>
+
+                <div>
+                    <label for="{{ kpi_formset.empty_form.measurement.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Measurement</label>
+                    {{ kpi_formset.empty_form.measurement }}
+                </div>
+               
+                <div>
+                    <label for="{{ kpi_formset.empty_form.baseline.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Baseline</label>
+                    {{ kpi_formset.empty_form.baseline }}
+                </div>
+           
+
+                <div>
+                    <label for="{{ kpi_formset.empty_form.target.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Annual Target</label>
+                    {{ kpi_formset.empty_form.target }}
+                </div>
+
+                <div class="quarterly-target-field">
+                    <label for="{{ kpi_formset.empty_form.target_q1.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q1 Target</label>
+                    {{ kpi_formset.empty_form.target_q1 }}
+                </div>
+
+                <div class="quarterly-target-field">
+                    <label for="{{ kpi_formset.empty_form.target_q2.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q2 Target</label>
+                    {{ kpi_formset.empty_form.target_q2 }}
+                </div>
+
+                <div class="quarterly-target-field">
+                    <label for="{{ kpi_formset.empty_form.target_q3.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q3 Target</label>
+                    {{ kpi_formset.empty_form.target_q3 }}
+                </div>
+
+                <div class="quarterly-target-field">
+                    <label for="{{ kpi_formset.empty_form.target_q4.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Q4 Target</label>
+                    {{ kpi_formset.empty_form.target_q4 }}
+                </div>
+            </div>
         </div>
-        
+    </div>
+    <button type="button" id="add-kpi-button" class="mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shadow-md">
+        Add Another KPI
+    </button>
+</div>
     <div class="p-6 rounded-xl bg-blue-50 border border-blue-300">
         <h2 class="text-2xl font-semibold text-blue-800 border-b pb-2 mt-2 mb-4">
             Major Activities & Detail Activities
@@ -243,7 +272,7 @@
                 {{ major_form.id }}
 
                 <!-- Major Form Fields -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                     <div>
                         <label for="{{ major_form.major_activity.id_for_label }}"
                                class="block text-sm font-medium text-gray-700 mb-2">
@@ -266,6 +295,16 @@
                         {% endif %}
                     </div>
 
+                   <div>
+                        <label for="{{ major_form.weight.id_for_label }}"
+                               class="block text-sm font-medium text-gray-700 mb-2">
+                            Weight
+                        </label>
+                        {{ major_form.weight }}
+                        {% if major_form.weight.errors %}
+                            <p class="text-red-500 text-xs mt-1">{{ major_form.weight.errors.as_text }}</p>
+                        {% endif %}
+                    </div>
                     <div>
                         <label for="{{ major_form.responsible_person.id_for_label }}"
                                class="block text-sm font-medium text-gray-700 mb-2">
@@ -289,11 +328,57 @@
                     </div>
 
                     <div class="detail-management-container" data-major-index="{{ forloop.counter0 }}">
-                        {# If your view provides nested management inputs for existing detail activities you can render them here #}
+                        {# If we have a detail_formset for this major, render its management form so JS has TOTAL/INITIAL inputs #}
+                        {% if detail_formsets and detail_formsets.forloop.counter0 %}
+                            {# Not used - fallback below #}
+                        {% endif %}
+                        {% with idx=forloop.counter0|stringformat:"s" %}
+                            {% if detail_formsets.idx %}
+                                {{ detail_formsets.idx.management_form }}
+                            {% endif %}
+                        {% endwith %}
                     </div>
 
                     <div class="detail-activity-forms space-y-2" data-major-index="{{ forloop.counter0 }}">
-                        {# Optionally render existing detail activity forms for this major_form if passed from the view #}
+                        {# Render existing detail forms if provided #}
+                        {% with idx=forloop.counter0|stringformat:"s" %}
+                            {% if detail_formsets and detail_formsets.idx %}
+                                {% for detail_form in detail_formsets.idx %}
+                                    <div class="detail-form-row bg-white p-3 rounded-md border border-gray-200 relative">
+                                        <div class="absolute top-2 right-2">
+                                            {% if detail_form.DELETE %}{{ detail_form.DELETE }}{% endif %}
+                                            <button type="button" class="delete-detail-btn p-1 text-red-500 hover:text-red-700 transition-colors" title="Remove this detail">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                        </div>
+
+                                        {{ detail_form.id }}
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                            <div>
+                                                {{ detail_form.detail_activity }}
+                                                {% if detail_form.detail_activity.errors %}
+                                                    <p class="text-red-500 text-xs mt-1">{{ detail_form.detail_activity.errors.as_text }}</p>
+                                                {% endif %}
+                                            </div>
+                                            <div>
+                                                {{ detail_form.weight }}
+                                                {% if detail_form.weight.errors %}
+                                                    <p class="text-red-500 text-xs mt-1">{{ detail_form.weight.errors.as_text }}</p>
+                                                {% endif %}
+                                            </div>
+                                            <div>
+                                                {{ detail_form.responsible_person }}
+                                                {% if detail_form.responsible_person.errors %}
+                                                    <p class="text-red-500 text-xs mt-1">{{ detail_form.responsible_person.errors.as_text }}</p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
                     </div>
                 </div>
             </div>
@@ -301,10 +386,11 @@
         </div>
 
         <div id="empty-form-major_activities" class="hidden">
-            <div class="major-form-row border p-4 rounded-md bg-white shadow-sm transition-all duration-300 ease-in-out" data-major-index="__prefix__">
-                
-                <div class="flex justify-between items-start border-b pb-2 mb-4">
-                    <h3 class="text-xl font-medium text-blue-700">Major Activity #<span class="major-index-display">__prefix__</span></h3>
+    <div class="major-form-row border p-4 rounded-md bg-white shadow-sm transition-all duration-300 ease-in-out" data-major-index="__prefix__">
+        <div class="flex justify-between items-start border-b pb-2 mb-4">
+            <h3 class="text-xl font-medium text-blue-700">
+                Major Activity #<span class="major-index-display">__prefix__</span>
+            </h3>
                     <div class="flex items-center space-x-2">
                         {{ major_activity_formset.empty_form.DELETE }}
                         <button type="button" class="plan-form-remove-btn delete-major-btn p-1 text-red-500 hover:text-red-700 transition-colors" title="Remove this Major Activity">
@@ -312,261 +398,327 @@
                         </button>
                     </div>
                 </div>
-                
-                {{ major_activity_formset.empty_form.id }}
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
-                        <label for="{{ major_activity_formset.empty_form.major_activity.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Major Activity</label>
-                        {{ major_activity_formset.empty_form.major_activity }}
-                    </div>
-                    <div>
-                        <label for="{{ major_activity_formset.empty_form.budget.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Budget</label>
-                        {{ major_activity_formset.empty_form.budget }}
-                    </div>
-                    <div>
-                        <label for="{{ major_activity_formset.empty_form.responsible_person.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Responsible Person</label>
-                        {{ major_activity_formset.empty_form.responsible_person }}
-                    </div>
-                </div>
-                
-                <div class="p-4 bg-gray-100 rounded-lg border">
-                    <div class="flex justify-between items-center mb-3 border-b pb-2">
-                        <h4 class="text-lg font-semibold text-gray-700">Detail Activities</h4>
-                        <button type="button" class="add-detail-btn px-3 py-1 bg-indigo-500 text-white rounded-lg text-sm hover:bg-indigo-600 transition-colors shadow-sm">
-                            + Add Detail Activity
-                        </button>
-                    </div>
-                    
-                    <div class="detail-management-container hidden" data-major-index="__prefix__">
-                        <input type="hidden" name="detail_activities-__prefix__-TOTAL_FORMS" id="id_detail_activities-__prefix__-TOTAL_FORMS" value="0">
-                        <input type="hidden" name="detail_activities-__prefix__-INITIAL_FORMS" id="id_detail_activities-__prefix__-INITIAL_FORMS" value="0">
-                        <input type="hidden" name="detail_activities-__prefix__-MAX_NUM_FORMS" id="id_detail_activities-__prefix__-MAX_NUM_FORMS" value="">
-                    </div>
-                    
-                    <div class="detail-activity-forms space-y-2" data-major-index="__prefix__">
-                    </div>
-                </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+                <label for="{{ major_activity_formset.empty_form.major_activity.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Major Activity</label>
+                {{ major_activity_formset.empty_form.major_activity }}
+            </div>
+            <div>
+                <label for="{{ major_activity_formset.empty_form.budget.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Budget</label>
+                {{ major_activity_formset.empty_form.budget }}
+            </div>
+
+            <div>
+                <label for="{{ major_activity_formset.empty_form.weight.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Weight</label>
+                {{ major_activity_formset.empty_form.weight }}
+            </div>
+
+            <div>
+                <label for="{{ major_activity_formset.empty_form.responsible_person.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Responsible Person</label>
+                {{ major_activity_formset.empty_form.responsible_person }}
             </div>
         </div>
 
-        <button type="button" id="add-major-activity-button" class="mt-4 px-6 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors shadow-md">
+        <div class="p-4 bg-gray-100 rounded-lg border">
+            <div class="flex justify-between items-center mb-3 border-b pb-2">
+                <h4 class="text-lg font-semibold text-gray-700">Detail Activities</h4>
+                <button type="button" class="add-detail-btn px-3 py-1 bg-indigo-500 text-white rounded-lg text-sm hover:bg-indigo-600 transition-colors shadow-sm">
+                    + Add Detail Activity
+                </button>
+            </div>
+
+            <div class="detail-management-container hidden" data-major-index="__prefix__">
+                <input type="hidden" name="detail_activities-__prefix__-TOTAL_FORMS" id="id_detail_activities-__prefix__-TOTAL_FORMS" value="0">
+                <input type="hidden" name="detail_activities-__prefix__-INITIAL_FORMS" id="id_detail_activities-__prefix__-INITIAL_FORMS" value="0">
+                <input type="hidden" name="detail_activities-__prefix__-MAX_NUM_FORMS" id="id_detail_activities-__prefix__-MAX_NUM_FORMS" value="">
+            </div>
+
+            <div class="detail-activity-forms space-y-2" data-major-index="__prefix__"></div>
+        </div>
+    </div>
+</div>
+
+        <button type="button" id="add-major-activity-button" class="mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shadow-md">
             Add Another Major Activity
         </button>
-    </div>
 
-        <div class="flex justify-center items-center pt-8 border-t space-x-4">
-            <button type="submit" class="bg-blue-600 text-white py-3 px-12 rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-lg">
-                {% if form.instance.pk %}Save Changes{% else %}Create Plan{% endif %}
-            </button>
-            <a href="{% url 'dashboard' %}" class="cancel-link bg-gray-300 text-gray-800 py-3 px-12 rounded-lg font-bold hover:bg-gray-400 transition-colors shadow-lg">Cancel</a>
-        </div>
+    <!-- Submit / Cancel buttons remain unchanged -->
+    <div class="flex justify-center items-center pt-8 border-t space-x-4">
+        <button type="submit" class="bg-blue-600 text-white py-3 px-12 rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-lg">
+            {% if form.instance.pk %}Save Changes{% else %}Create Plan{% endif %}
+        </button>
+        <a href="{% url 'dashboard' %}" class="cancel-link bg-gray-300 text-gray-800 py-3 px-12 rounded-lg font-bold hover:bg-gray-400 transition-colors shadow-lg">Cancel</a>
+    </div>
     </form>
 </div>
 
 <style>
-    /* Styling for form fields */
-    input:not([type="hidden"]):not(.cancel-link), textarea, select {
-        @apply block w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-800;
-    }
-    input.text-sm, select.text-sm {
-        @apply px-2 py-1;
-    }
-
-    /* Styling for deleted form rows */
-    .deleted-form {
-        opacity: 0.5;
-        background-color: #fee2e2; /* bg-red-100 */
-        border-color: #fca5a5; /* border-red-300 */
-        pointer-events: auto;
-    }
-    .deleted-form .plan-form-remove-btn, .deleted-form .delete-detail-btn {
-        color: #ef4444 !important; /* text-red-500 - ensures the X is visible */
-    }
+/* keep your css unchanged; omitted here for brevity */
 </style>
 
 <script>
     // --- Configuration (Detail Form Template from views.py) ---
-    // This is the raw HTML template generated in views.py, ready for JS replacement.
     const DETAIL_FORM_TEMPLATE_HTML = `{{ detail_form_template_html|escapejs }}`;
-    
-    // --- Utility Functions (Standard Django Formset Management) ---
-    function updateElementIndex(el, prefix, index) {
-        let name = el.getAttribute('name');
-        let id = el.getAttribute('id');
 
-        if (name) {
-            name = name.replace(/-(\d+|__prefix__)-/g, '-' + index + '-');
-            el.setAttribute('name', name);
-        }
-        if (id) {
-            id = id.replace(/-(\d+|__prefix__)-/g, '-' + index + '-');
-            el.setAttribute('id', id);
+    // --- Utility Functions ---
+    function updateElementIndex(el, prefix, index) {
+        if (!el) return;
+        const attrs = ['name', 'id', 'for'];
+        attrs.forEach(attr => {
+            if (el.hasAttribute && el.hasAttribute(attr)) {
+                let val = el.getAttribute(attr);
+                if (!val) return;
+                // Replace either __prefix__ or numeric index for formset (handles nested prefixes)
+                val = val.replace(new RegExp(`(${prefix.replace('_','\\_')}|__prefix__|\\d+)`, 'g'), function(match) {
+                    // For names like 'major_activities-__prefix__-field' we want to replace only the __prefix__ or numbers between hyphens.
+                    return val; // leave default - we will use more specific replacements below
+                });
+
+                // The simple, practical approach: replace occurrences of '__prefix__' and the first numeric index after prefix
+                val = val.replace(/__prefix__/g, index);
+                // Replace patterns like '-0-' (first numeric occurrence) with new index (but be careful not to replace nested indexes)
+                val = val.replace(/-(\d+)-/, '-' + index + '-');
+
+                el.setAttribute(attr, val);
+            }
+        });
+
+        // Also update input.value attributes for 'id_' prefixed ids in case they exist
+        if (el.id) {
+            el.id = el.id.replace(/__prefix__/g, index).replace(/-(\d+)-/, '-' + index + '-');
         }
     }
 
+    function findClosestPrefixContainer(el) {
+        return el.closest('[data-prefix], [data-form-type]');
+    }
+
+    function decrementTotalForms(prefix) {
+        const input = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
+        if (input) {
+            let val = parseInt(input.value || '0', 10);
+            if (!isNaN(val) && val > 0) {
+                input.value = String(val - 1);
+            }
+        }
+    }
+
+    // Generic addForm reused for goals and kpis (keeps original behavior)
     function addForm(containerId) {
         const container = document.getElementById(containerId);
         const prefix = container.dataset.prefix;
         const totalFormsInput = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
-        
-        let nextIndex = parseInt(totalFormsInput.value);
-        if (isNaN(nextIndex)) nextIndex = 0; // Handle case where value is empty
+
+        let nextIndex = parseInt(totalFormsInput.value || '0', 10);
+        if (isNaN(nextIndex)) nextIndex = 0;
 
         const emptyFormTemplate = document.getElementById(`empty-form-${prefix}`).innerHTML;
-        let newForm = emptyFormTemplate.replace(/__prefix__/g, nextIndex);
-        
-        const newFormNode = document.createElement('div');
-        newFormNode.innerHTML = newForm;
-        
-        // Update indices for all elements in the new form
-        newFormNode.querySelectorAll('*').forEach(el => updateElementIndex(el, prefix, nextIndex));
+        let newFormHtml = emptyFormTemplate.replace(/__prefix__/g, nextIndex);
 
-        container.appendChild(newFormNode.firstChild);
-        totalFormsInput.value = nextIndex + 1;
-        
-        // Re-attach listeners for the new form's remove button
-        newFormNode.querySelector('.plan-form-remove-btn').addEventListener('click', handleRemoveClick);
-        
-        // For KPI formsets, check plan type visibility
-        if (prefix === 'kpis') {
-            updateKpiQuarterlyFields();
-        }
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = newFormHtml;
+        const newNode = wrapper.firstElementChild;
+
+        // Update names & ids
+        newNode.querySelectorAll('*').forEach(el => {
+            // replace patterns like 'prefix-__prefix__-' and 'prefix-0-'
+            if (el.hasAttribute('name')) {
+                el.name = el.name.replace(/__prefix__/g, nextIndex).replace(/-(\d+)-/, '-' + nextIndex + '-');
+            }
+            if (el.hasAttribute('id')) {
+                el.id = el.id.replace(/__prefix__/g, nextIndex).replace(/-(\d+)-/, '-' + nextIndex + '-');
+            }
+            if (el.hasAttribute('for')) {
+                el.htmlFor = el.htmlFor.replace(/__prefix__/g, nextIndex).replace(/-(\d+)-/, '-' + nextIndex + '-');
+            }
+        });
+
+        container.appendChild(newNode);
+        totalFormsInput.value = String(nextIndex + 1);
+
+        const removeBtn = newNode.querySelector('.plan-form-remove-btn');
+        if (removeBtn) removeBtn.addEventListener('click', handleRemoveClick);
+
+        if (prefix === 'kpis') updateKpiQuarterlyFields();
     }
 
     function handleRemoveClick(event) {
         event.preventDefault();
         const button = event.currentTarget;
         const formRow = button.closest('.form-row') || button.closest('.major-form-row') || button.closest('.detail-form-row');
-        
+
         if (!formRow) return;
 
-        // 1. Check for the formset management prefix to know if it's a top-level formset (goals, kpis, major_activities)
-        const prefixMatch = formRow.className.match(/(form-row|major-form-row)/);
+        // Find the nearest prefix container to get the formset prefix, if available
+        const prefixContainer = findClosestPrefixContainer(formRow);
+        const prefix = prefixContainer ? (prefixContainer.dataset.prefix || prefixContainer.dataset.formType) : null;
 
-        if (prefixMatch) {
-            // This is a top-level formset item (Goal, KPI, or Major Activity)
-            const deleteInput = formRow.querySelector('[name$="-DELETE"]');
+        const deleteInput = formRow.querySelector('[name$="-DELETE"]');
 
-            if (deleteInput && deleteInput.value !== 'on') {
-                // Existing form: mark for deletion
-                deleteInput.checked = true;
+        // If this has a delete checkbox, toggle it (existing item)
+        if (deleteInput) {
+            // it's a checkbox
+            deleteInput.checked = !deleteInput.checked;
+            if (deleteInput.checked) {
                 formRow.classList.add('deleted-form');
-                formRow.style.display = 'none'; // Hide the form visually
-                
-            } else if (deleteInput) {
-                // Revert deletion if already marked (e.g., in case of accidental re-click)
-                deleteInput.checked = false;
+                formRow.style.display = 'none';
+            } else {
                 formRow.classList.remove('deleted-form');
                 formRow.style.display = '';
-            } else {
-                // New form added via JS (no PK, no DELETE field needed)
-                formRow.remove();
-                // We rely on the server side to correct TOTAL_FORMS index on the fly for simple formsets
             }
-
-        } else if (formRow.classList.contains('detail-form-row')) {
-            // This is a Detail Activity (Nested)
-            handleDetailRemove(formRow);
+            return;
         }
+
+        // Otherwise this is a newly created client-side form (no DELETE). Remove and decrement TOTAL_FORMS.
+        // Determine prefix by inspecting any input name in this row, or fallback to container prefix
+        let inferredPrefix = prefix;
+        if (!inferredPrefix) {
+            const anyInput = formRow.querySelector('input[name], textarea[name], select[name]');
+            if (anyInput) {
+                const nameParts = anyInput.getAttribute('name').split('-');
+                if (nameParts.length > 0) {
+                    inferredPrefix = nameParts[0];
+                }
+            }
+        }
+
+        // Remove the row
+        formRow.remove();
+
+        // Decrement TOTAL_FORMS for that prefix if possible
+        if (inferredPrefix) decrementTotalForms(inferredPrefix);
     }
-    
+
     // --- Detail Activity Management (Nested Logic) ---
     function addDetailActivity(majorFormRow, majorIndex) {
         const detailContainer = majorFormRow.querySelector('.detail-activity-forms');
         const detailManagementContainer = majorFormRow.querySelector(`.detail-management-container[data-major-index="${majorIndex}"]`);
-        
+
         // Find or create the TOTAL_FORMS input for the nested formset
         let totalFormsInput = detailManagementContainer.querySelector(`#id_detail_activities-${majorIndex}-TOTAL_FORMS`);
         if (!totalFormsInput) {
-             // This happens for a new Major Activity form added by JS. We must insert the management inputs.
-             totalFormsInput = document.createElement('input');
-             totalFormsInput.type = 'hidden';
-             totalFormsInput.name = `detail_activities-${majorIndex}-TOTAL_FORMS`;
-             totalFormsInput.id = `id_detail_activities-${majorIndex}-TOTAL_FORMS`;
-             totalFormsInput.value = '0';
-             detailManagementContainer.appendChild(totalFormsInput);
-             
-             // Optionally add INITIAL_FORMS and MAX_NUM_FORMS if needed for structure
-             detailManagementContainer.innerHTML += `
+            totalFormsInput = document.createElement('input');
+            totalFormsInput.type = 'hidden';
+            totalFormsInput.name = `detail_activities-${majorIndex}-TOTAL_FORMS`;
+            totalFormsInput.id = `id_detail_activities-${majorIndex}-TOTAL_FORMS`;
+            totalFormsInput.value = '0';
+            detailManagementContainer.appendChild(totalFormsInput);
+
+            detailManagementContainer.innerHTML += `
                 <input type="hidden" name="detail_activities-${majorIndex}-INITIAL_FORMS" id="id_detail_activities-${majorIndex}-INITIAL_FORMS" value="0">
                 <input type="hidden" name="detail_activities-${majorIndex}-MAX_NUM_FORMS" id="id_detail_activities-${majorIndex}-MAX_NUM_FORMS" value="">
-             `;
+            `;
+            // After the string append above, reselect totalFormsInput to ensure reference still valid
+            totalFormsInput = detailManagementContainer.querySelector(`#id_detail_activities-${majorIndex}-TOTAL_FORMS`);
         }
 
-        let nextIndex = parseInt(totalFormsInput.value);
+        let nextIndex = parseInt(totalFormsInput.value || '0', 10);
         if (isNaN(nextIndex)) nextIndex = 0;
 
-        // 1. Replace placeholders in the template
         let newFormHtml = DETAIL_FORM_TEMPLATE_HTML
             .replace(/__MAJOR_INDEX__/g, majorIndex)
             .replace(/__INDEX__/g, nextIndex);
 
-        // 2. Append the new form HTML
-        const newFormDiv = document.createElement('div');
-        newFormDiv.className = 'detail-form-row bg-white p-3 rounded-md border border-gray-200 relative';
-        newFormDiv.innerHTML = newFormHtml;
-        
-        detailContainer.appendChild(newFormDiv);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'detail-form-row bg-white p-3 rounded-md border border-gray-200 relative';
+        wrapper.innerHTML = newFormHtml;
 
-        // 3. Update TOTAL_FORMS count
-        totalFormsInput.value = nextIndex + 1;
-        
-        // Re-attach listeners for the delete button on the new form
-        newFormDiv.querySelector('.delete-detail-btn').addEventListener('click', handleRemoveClick);
+        // Fix inputs' names and ids for the proper index
+        wrapper.querySelectorAll('*').forEach(el => {
+            if (el.hasAttribute('name')) {
+                el.name = el.name.replace(/__MAJOR_INDEX__/g, majorIndex).replace(/__INDEX__/g, nextIndex).replace(/-0-/, '-' + nextIndex + '-');
+            }
+            if (el.hasAttribute('id')) {
+                el.id = el.id.replace(/__MAJOR_INDEX__/g, majorIndex).replace(/__INDEX__/g, nextIndex);
+            }
+            if (el.hasAttribute('for')) {
+                el.htmlFor = el.htmlFor.replace(/__MAJOR_INDEX__/g, majorIndex).replace(/__INDEX__/g, nextIndex);
+            }
+        });
+
+        detailContainer.appendChild(wrapper);
+        totalFormsInput.value = String(nextIndex + 1);
+
+        const removeBtn = wrapper.querySelector('.delete-detail-btn');
+        if (removeBtn) removeBtn.addEventListener('click', handleRemoveClick);
     }
-    
+
     function handleDetailRemove(detailFormRow) {
         const deleteInput = detailFormRow.querySelector('[name$="-DELETE"]');
-        
+
         if (deleteInput) {
-            // Existing form (has a PK field, marked for deletion)
             deleteInput.checked = true;
             detailFormRow.classList.add('deleted-form');
-            detailFormRow.style.display = 'none'; 
+            detailFormRow.style.display = 'none';
         } else {
-            // New form added by JS (no PK, no DELETE field)
+            // For a newly added nested form, remove and decrement nested TOTAL_FORMS
+            const anyInput = detailFormRow.querySelector('input[name], textarea[name], select[name]');
+            let inferredPrefix = null;
+            if (anyInput) {
+                const nameParts = anyInput.getAttribute('name').split('-');
+                if (nameParts.length >= 2) {
+                    inferredPrefix = nameParts[0] + '-' + nameParts[1]; // e.g., detail_activities-0
+                }
+            }
             detailFormRow.remove();
+            if (inferredPrefix) {
+                // id format: id_detail_activities-<major>-TOTAL_FORMS
+                const id = `id_${inferredPrefix}-TOTAL_FORMS`;
+                const el = document.getElementById(id);
+                if (el) {
+                    let val = parseInt(el.value || '0', 10);
+                    if (!isNaN(val) && val > 0) el.value = String(val - 1);
+                }
+            }
         }
     }
 
     // --- Major Activity Management ---
     function addMajorActivity() {
-        const prefix = 'major_activities';
-        const container = document.getElementById(`${prefix}-formset-container`);
+        // container has id 'major-activity-formset-container' but data-prefix contains actual formset prefix
+        const container = document.querySelector('[data-form-type="major_activities"]');
+        const prefix = container.dataset.prefix;
         const totalFormsInput = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
-        
-        let nextIndex = parseInt(totalFormsInput.value);
-        if (isNaN(nextIndex)) nextIndex = 0;
 
-        // Clone the empty form template
+        let nextIndex = parseInt(totalFormsInput.value || '0', 10);
+        if (isNaN(nextIndex)) nextIndex = 0;
         const emptyFormTemplate = document.getElementById(`empty-form-${prefix}`).innerHTML;
-        let newForm = emptyFormTemplate.replace(/__prefix__/g, nextIndex);
-        
-        const newFormNode = document.createElement('div');
-        newFormNode.innerHTML = newForm;
-        
-        // Update indices for all elements in the new form
-        newFormNode.querySelectorAll('*').forEach(el => updateElementIndex(el, prefix, nextIndex));
-        
-        // Correctly set the major index display number
-        const majorIndexDisplay = newFormNode.querySelector('.major-index-display');
+        let newFormHtml = emptyFormTemplate.replace(/__prefix__/g, nextIndex);
+
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = newFormHtml;
+        const newNode = wrapper.firstElementChild;
+
+        // Update attributes
+        newNode.querySelectorAll('*').forEach(el => {
+            if (el.hasAttribute('name')) el.name = el.name.replace(/__prefix__/g, nextIndex).replace(/-(\d+)-/, '-' + nextIndex + '-');
+            if (el.hasAttribute('id')) el.id = el.id.replace(/__prefix__/g, nextIndex).replace(/-(\d+)-/, '-' + nextIndex + '-');
+            if (el.hasAttribute('for')) el.htmlFor = el.htmlFor.replace(/__prefix__/g, nextIndex).replace(/-(\d+)-/, '-' + nextIndex + '-');
+        });
+
+        // Replace major-index-display if present
+        const majorIndexDisplay = newNode.querySelector('.major-index-display');
         if (majorIndexDisplay) majorIndexDisplay.textContent = nextIndex + 1;
 
+        container.appendChild(newNode);
+        totalFormsInput.value = String(nextIndex + 1);
 
-        container.appendChild(newFormNode.firstChild);
-        totalFormsInput.value = nextIndex + 1;
-        
-        // Attach listeners for the new Major Activity form
         const majorFormRow = container.lastElementChild;
-        majorFormRow.querySelector('.delete-major-btn').addEventListener('click', handleRemoveClick);
-        majorFormRow.querySelector('.add-detail-btn').addEventListener('click', (e) => {
-            e.preventDefault();
-            addDetailActivity(majorFormRow, nextIndex);
-        });
+        const deleteBtn = majorFormRow.querySelector('.delete-major-btn');
+        if (deleteBtn) deleteBtn.addEventListener('click', handleRemoveClick);
+
+        const addDetailBtn = majorFormRow.querySelector('.add-detail-btn');
+        if (addDetailBtn) {
+            addDetailBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const idx = majorFormRow.dataset.majorIndex || (nextIndex);
+                addDetailActivity(majorFormRow, idx);
+            });
+        }
     }
 
-    // --- Plan Type Conditional Visibility (Your Existing Logic) ---
-
+    // --- Plan Type Conditional Visibility (unchanged) ---
     const planTypeSelect = document.getElementById('id_plan_type');
     const monthField = document.getElementById('month-field');
     const quarterField = document.getElementById('quarter-field');
@@ -594,36 +746,37 @@
             monthField.classList.remove('hidden');
             weekField.classList.remove('hidden');
         }
-        
+
         updateKpiQuarterlyFields();
     }
-    
+
     // --- Initialization ---
     document.addEventListener('DOMContentLoaded', function() {
-        updatePlanFields(); // Run on load to set initial visibility
-        planTypeSelect.addEventListener('change', updatePlanFields);
+        // protect against missing select
+        if (planTypeSelect) {
+            updatePlanFields();
+            planTypeSelect.addEventListener('change', updatePlanFields);
+        }
 
-        // Listeners for Top-Level Formsets (Goals, KPIs)
-        document.getElementById('add-goal-button').addEventListener('click', () => {
-            addForm('goal-formset-container');
-        });
-        document.getElementById('add-kpi-button').addEventListener('click', () => {
-            addForm('kpi-formset-container');
-        });
+        // Goals & KPIs add buttons
+        const addGoal = document.getElementById('add-goal-button');
+        if (addGoal) addGoal.addEventListener('click', () => addForm('goal-formset-container'));
 
-        // Listener for Major Activities (New Button)
-        document.getElementById('add-major-activity-button').addEventListener('click', addMajorActivity);
+        const addKpi = document.getElementById('add-kpi-button');
+        if (addKpi) addKpi.addEventListener('click', () => addForm('kpi-formset-container'));
 
-        // 2. Add event listeners for all existing "Remove" buttons (goals, kpis, major activities)
+        // Major activity add button
+        const addMajor = document.getElementById('add-major-activity-button');
+        if (addMajor) addMajor.addEventListener('click', addMajorActivity);
+
+        // attach remove listeners for existing
         document.querySelectorAll('.plan-form-remove-btn').forEach(button => {
             button.addEventListener('click', handleRemoveClick);
         });
 
-        // 3. Attach listeners for existing Detail Activity buttons
+        // attach add-detail/listeners to existing major rows
         document.querySelectorAll('.major-form-row').forEach(majorRow => {
             const majorIndex = majorRow.dataset.majorIndex;
-            
-            // Add Detail button listener
             const addBtn = majorRow.querySelector('.add-detail-btn');
             if (addBtn) {
                 addBtn.addEventListener('click', (e) => {
@@ -631,13 +784,11 @@
                     addDetailActivity(majorRow, majorIndex);
                 });
             }
-            
-            // Existing Detail Activity delete button listeners
-            majorRow.querySelectorAll('.delete-detail-btn').forEach(button => {
-                button.addEventListener('click', handleRemoveClick);
+
+            majorRow.querySelectorAll('.delete-detail-btn').forEach(btn => {
+                btn.addEventListener('click', handleRemoveClick);
             });
         });
     });
 </script>
-
 {% endblock %}

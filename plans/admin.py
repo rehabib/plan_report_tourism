@@ -37,7 +37,7 @@ class MajorActivityInline(admin.StackedInline):
 
     # Fields that are calculated properties and should only be displayed (read-only)
     readonly_fields = [
-        'total_weight', 
+        'weight', 
     ]
 
     # Group the editable fields and the read-only calculated field for a nice display
@@ -45,7 +45,7 @@ class MajorActivityInline(admin.StackedInline):
         (None, {
             'fields': (
                 ('major_activity', 'responsible_person'),
-                ('budget', 'total_weight'), # Display budget next to its calculated weight
+                ('budget', 'weight'), # Display budget next to its calculated weight
             ),
         }),
     )
