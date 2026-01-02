@@ -128,9 +128,8 @@ class MajorActivity(models.Model):
 
     @property
     def total_weight(self):
-       result = self.detail_activities.aggregate(sum_weight=Sum("weight"))
-        # Returns 0 if no detail activities exist
-       return result["sum_weight"] or 0.00
+        result = self.detail_activities.aggregate(sum_weight=Sum("weight"))
+        return result["sum_weight"] or 0.00
 
 
 class DetailActivity(models.Model):

@@ -5,9 +5,7 @@ class Report(models.Model):
     """
     Model for a report linked to a plan.
     """
-    REPORT_TYPE_CHOICES = [
-        ("daily", "Daily"),
-        ("weekly", "Weekly"),
+    REPORT_TYPE_CHOICES = [ 
         ("monthly", "Monthly"),
         ("quarterly", "Quarterly"),
         ("yearly", "Yearly"),

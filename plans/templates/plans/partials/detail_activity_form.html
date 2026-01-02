@@ -1,0 +1,54 @@
+<div class="detail-activity-form border rounded-lg p-4 mb-3 bg-gray-50">
+
+    <!-- DETAIL ACTIVITY NAME -->
+    <div class="mb-3">
+        <label class="block text-sm font-medium text-gray-700">
+            Detail Activity
+        </label>
+        {{ detail_form.detail_activity }}
+        {{ detail_form.detail_activity.errors }}
+    </div>
+
+    <!-- WEIGHT -->
+    <div class="mb-3">
+        <label class="block text-sm font-medium text-gray-700">
+            Weight
+        </label>
+        {{ detail_form.weight }}
+        {{ detail_form.weight.errors }}
+    </div>
+
+    <!-- STATUS -->
+    <div class="mb-3">
+        <label class="block text-sm font-medium text-gray-700">
+            Status
+        </label>
+        {{ detail_form.status }}
+        {{ detail_form.status.errors }}
+    </div>
+
+    <!-- RESPONSIBLE PERSON -->
+    <div class="mb-3">
+        <label class="block text-sm font-medium text-gray-700">
+            Responsible Person
+        </label>
+        {{ detail_form.responsible_person }}
+        {{ detail_form.responsible_person.errors }}
+    </div>
+
+    <!-- DELETE BUTTON -->
+    <div class="flex justify-between items-center mt-3">
+        <div class="flex items-center gap-2">
+            {{ detail_form.DELETE }}
+            <span class="text-sm text-red-600">Delete</span>
+        </div>
+
+        <button
+            type="button"
+            class="delete-detail-activity text-red-600 hover:text-red-800 text-sm font-medium"
+        >
+            Remove
+        </button>
+    </div>
+
+</div>

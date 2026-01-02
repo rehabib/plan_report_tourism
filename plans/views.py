@@ -1,4 +1,5 @@
 import re
+from django.template.loader import render_to_string
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout
 from django.contrib.auth import get_user_model
@@ -14,15 +15,10 @@ from .forms import (
     StrategicGoalFormset, 
     KPIFormset, 
     MajorActivityFormset, 
-    DetailActivityForm, # <-- Needed to instantiate individual Detail forms
-    DetailActivityFormset # <-- Needed to get the empty_form template
+    DetailActivityFormset,
+   
 )
 
-# try:
-#     from accounts.models import User 
-# except ImportError:
-#     # Fallback if User is imported directly via settings.AUTH_USER_MODEL in a different way
-#     from django.contrib.auth import get_user_model
 User = get_user_model()
 
 
@@ -183,24 +179,46 @@ def delete_plan(request, plan_id):
     return redirect('dashboard')
 
 
-# --- Core Activity Management Logic ---
-def _get_detail_form_template():
-    empty_detail_formset = DetailActivityFormset(prefix='detail_activities-999')
-    detail_form_template_html = empty_detail_formset.empty_form.as_p()
-    return detail_form_template_html.replace('detail_activities-999-0-', 'detail_activities-__MAJOR_INDEX__-__INDEX__-')
+# def parse_detail_activities(post_data):
+#     details = {}
+#     for key, value in post_data.items():
+#         if not key.startswith("detail_activities-"):
+#             continue
+#         parts = key.split("-")
+#         if len(parts) < 4:
+#             continue
+#         _, major_idx, detail_idx, field = parts[0], parts[1], parts[2], "-".join(parts[3:])
+#         details.setdefault(major_idx, {})
+#         details[major_idx].setdefault(detail_idx, {})
+#         details[major_idx][detail_idx][field] = value
+#     return details
 
+def parse_detail_activities(post_data):
+    """
+    Extracts detail activity data from POST payload.
+    Supports unlimited dynamic detail activities.
+    """
+    details = {}
 
-def _build_detail_formsets_for_plan(plan):
-    """
-    For each MajorActivity on a given plan, build a DetailActivityFormset
-    with prefix detail_activities-{index} and return a dict mapping index->formset.
-    """
-    detail_formsets = {}
-    for idx, major in enumerate(plan.major_activities.all()):
-        prefix = f'detail_activities-{idx}'
-        formset = DetailActivityFormset(instance=major, prefix=prefix)
-        detail_formsets[str(idx)] = formset
-    return detail_formsets
+    for key, value in post_data.items():
+        if not key.startswith("detail_activities-"):
+            continue
+
+        # Expected format:
+        # detail_activities-<major_index>-<detail_index>-<field_name>
+        parts = key.split("-")
+        if len(parts) < 4:
+            continue
+
+        major_idx = parts[1]
+        detail_idx = parts[2]
+        field = "-".join(parts[3:])  # handles fields with hyphens
+
+        details.setdefault(major_idx, {})
+        details[major_idx].setdefault(detail_idx, {})
+        details[major_idx][detail_idx][field] = value
+
+    return details
 
 
 @login_required
@@ -212,14 +230,9 @@ def create_plan(request):
         form = PlanCreationForm(request.POST)
         goal_formset = StrategicGoalFormset(request.POST, prefix='goal')
         kpi_formset = KPIFormset(request.POST, prefix='kpis', form_kwargs=formset_kwargs)
-        major_activity_formset = MajorActivityFormset(request.POST, prefix='major_activities')
+        major_formset = MajorActivityFormset(request.POST, prefix='major_activities')
 
-        is_valid = form.is_valid() and goal_formset.is_valid() and kpi_formset.is_valid() and major_activity_formset.is_valid()
-
-        # We'll collect detail formsets for validation errors rendering
-        detail_formsets_for_render = {}
-
-        if is_valid:
+        if form.is_valid() and goal_formset.is_valid() and kpi_formset.is_valid() and major_formset.is_valid():
             try:
                 with transaction.atomic():
                     plan = form.save(commit=False)
@@ -233,126 +246,100 @@ def create_plan(request):
                     kpi_formset.instance = plan
                     if plan_type and plan_type != 'yearly':
                         for kpi_form in kpi_formset:
-                            if not kpi_form.cleaned_data.get('DELETE', False) and kpi_form.cleaned_data.get('name'):
-                                kpi_form.instance.target_q1 = 0.0
-                                kpi_form.instance.target_q2 = 0.0
-                                kpi_form.instance.target_q3 = 0.0
-                                kpi_form.instance.target_q4 = 0.0
+                            if not kpi_form.cleaned_data.get('DELETE') and kpi_form.cleaned_data.get('name'):
+                                kpi_form.instance.target_q1 = 0
+                                kpi_form.instance.target_q2 = 0
+                                kpi_form.instance.target_q3 = 0
+                                kpi_form.instance.target_q4 = 0
                     kpi_formset.save()
 
-                    # Save Major Activities
-                    major_forms = major_activity_formset.save(commit=False)
+                    # ===== SAVE MAJOR ACTIVITIES CORRECTLY =====
+                major_formset.instance = plan
+                major_formset.save()
 
-                    # We'll need to iterate through formset.forms (including existing) to respect prefixes/indexes
-                    for major_index, major_form in enumerate(major_activity_formset):
-                        # If formset provided cleaned_data
-                        if not major_form.cleaned_data:
+                detail_map = parse_detail_activities(request.POST)
+
+                # Loop through major_formset instead of enumerating DB results
+                for major_index, major_form in enumerate(major_formset.forms):
+                    if major_form.cleaned_data.get('DELETE'):
+                        continue
+                    
+                    major = major_form.instance
+                    
+                    # Clear old details in edit mode
+                    DetailActivity.objects.filter(major_activity=major).delete()
+
+                    # Get detail activities for this major
+                    for fields in detail_map.get(str(major_index), {}).values():
+
+                        if fields.get('DELETE') in ('on', '1', 'true'):
                             continue
 
-                        # Handle delete
-                        if major_form.cleaned_data.get('DELETE', False):
-                            if major_form.instance.pk:
-                                major_form.instance.delete()
+                        if not fields.get('detail_activity'):
                             continue
 
-                        # Save or update major activity
-                        major_activity = major_form.save(commit=False)
-                        major_activity.plan = plan
-                        major_activity.save()
+                        user_id = fields.get('responsible_person')
+                        responsible_user = User.objects.filter(id=user_id).first() if user_id else None
 
-                        # Build a DetailActivityFormset for this major using the prefix pattern
-                        prefix = f'detail_activities-{major_index}'
-                        # Create a formset instance bound to POST -> this will validate nested forms
-                        detail_fs = DetailActivityFormset(request.POST, instance=major_activity, prefix=prefix)
+                        DetailActivity.objects.create(
+                            major_activity=major,
+                            detail_activity=fields.get('detail_activity'),
+                            weight=fields.get('weight') or 0,
+                            responsible_person=responsible_user,
+                            status=fields.get('status', 'PENDING')
+                        )
 
-                        detail_formsets_for_render[str(major_index)] = detail_fs
 
-                        if detail_fs.is_valid():
-                            # Save and set the major_activity foreign key is already handled by formset.save()
-                            details = detail_fs.save(commit=False)
-                            # Delete items flagged for deletion
-                            for deleted in detail_fs.deleted_objects:
-                                deleted.delete()
-                            # Save or update details
-                            for d in details:
-                                d.major_activity = major_activity
-                                d.save()
 
-                            # After save, validate sum of detail weights equals major_form weight (if major has weight field as 'weight')
-                            # In your models MajorActivity doesn't have a 'weight' field, so we check against total_weight property or you may want to compare to a field:
-                            # If your MajorActivity had a numeric 'weight' field, uncomment the next block and change as needed.
-                            # Example: if major_form has 'weight' field, use:
-                            # major_weight = major_form.cleaned_data.get('weight')
-                            # total_detail_weight = major_activity.total_weight
-                            # if major_weight is not None and abs(float(total_detail_weight) - float(major_weight)) > 0.001:
-                            #     raise ValueError(f"Sum of detail weights ({total_detail_weight}) does not equal Major Activity weight ({major_weight}).")
-
-                        else:
-                            # If detail_fs invalid -> raise to roll back and show errors
-                            raise ValueError(f"Detail Activity formset for major index {major_index} failed validation: {detail_fs.errors}")
-
-                    return redirect('plan_success', plan_id=plan.id)
-
-            except ValueError as ve:
-                print(f"Nested Validation Failed: {ve}")
-                form.add_error(None, 'A nested activity failed validation. Please check the details.')
+                return redirect('plan_success', plan_id=plan.id)
             except Exception as e:
-                print(f"Transaction failed: {e}")
-                form.add_error(None, 'An unexpected error occurred during saving.')
+                print(e)
+                form.add_error(None, 'An error occurred while saving the plan.')
 
-        # If invalid - prepare detail formsets for rendering (best effort)
-        else:
-            # Build detail formsets for existing majors so the template can render them with errors
-            # Determine how many major forms we have in the POST (TOTAL_FORMS)
-            try:
-                major_total = int(request.POST.get('major_activities-TOTAL_FORMS', 0))
-            except ValueError:
-                major_total = 0
-
-            for idx in range(major_total):
-                prefix = f'detail_activities-{idx}'
-                detail_formsets_for_render[str(idx)] = DetailActivityFormset(request.POST, prefix=prefix)
-
-        # Fall through and render template with errors and detail_formsets_for_render
     else:
         form = PlanCreationForm()
         goal_formset = StrategicGoalFormset(prefix='goal')
         kpi_formset = KPIFormset(prefix='kpis', form_kwargs=formset_kwargs)
-        major_activity_formset = MajorActivityFormset(prefix='major_activities')
-        detail_formsets_for_render = {}  # empty on initial create
+        major_formset = MajorActivityFormset(prefix='major_activities')
+    # ===== EMPTY DETAIL ACTIVITY FORM (for JS cloning) =====
+        empty_detail_formset = DetailActivityFormset(
+            prefix='detail_activities-__MAJOR_INDEX__'
+        )
 
-    context = {
+        detail_form_template_html = render_to_string(
+            'plans/partials/detail_activity_form.html',
+            {
+                'detail_form': empty_detail_formset.empty_form,
+                'major_index': '__MAJOR_INDEX__',
+                'detail_index': '__INDEX__',
+            }
+        )
+    return render(request, 'plans/create_plan.html', {
         'form': form,
         'goal_formset': goal_formset,
         'kpi_formset': kpi_formset,
-        'major_activity_formset': major_activity_formset,
-        'plan_instance': None,
-        'detail_form_template_html': _get_detail_form_template(),
-        'detail_formsets': detail_formsets_for_render,
-    }
-    return render(request, 'plans/create_plan.html', context)
+        'major_activity_formset': major_formset,
+        'detail_formsets': {},
+        'detail_form_template_html': detail_form_template_html,
+    })
 
 
 @login_required
 def edit_plan(request, plan_id):
     plan = get_object_or_404(Plan, id=plan_id)
     if plan.user != request.user:
-        raise Http404("You do not have permission to edit this plan.")
+        raise Http404
 
     plan_type = request.POST.get('plan_type') or plan.plan_type
     formset_kwargs = {'plan_type': plan_type} if plan_type else {}
-
-    detail_formsets_for_render = {}
 
     if request.method == 'POST':
         form = PlanCreationForm(request.POST, instance=plan)
         goal_formset = StrategicGoalFormset(request.POST, instance=plan, prefix='goal')
         kpi_formset = KPIFormset(request.POST, instance=plan, prefix='kpis', form_kwargs=formset_kwargs)
-        major_activity_formset = MajorActivityFormset(request.POST, instance=plan, prefix='major_activities')
+        major_formset = MajorActivityFormset(request.POST, instance=plan, prefix='major_activities')
 
-        is_valid = form.is_valid() and goal_formset.is_valid() and kpi_formset.is_valid() and major_activity_formset.is_valid()
-
-        if is_valid:
+        if form.is_valid() and goal_formset.is_valid() and kpi_formset.is_valid() and major_formset.is_valid():
             try:
                 with transaction.atomic():
                     form.save()
@@ -360,80 +347,62 @@ def edit_plan(request, plan_id):
 
                     if plan_type and plan_type != 'yearly':
                         for kpi_form in kpi_formset:
-                            if not kpi_form.cleaned_data.get('DELETE', False) and kpi_form.cleaned_data.get('name'):
-                                kpi_form.instance.target_q1 = 0.0
-                                kpi_form.instance.target_q2 = 0.0
-                                kpi_form.instance.target_q3 = 0.0
-                                kpi_form.instance.target_q4 = 0.0
+                            if not kpi_form.cleaned_data.get('DELETE'):
+                                kpi_form.instance.target_q1 = 0
+                                kpi_form.instance.target_q2 = 0
+                                kpi_form.instance.target_q3 = 0
+                                kpi_form.instance.target_q4 = 0
                     kpi_formset.save()
 
-                    # Save or update majors and nested details
-                    for major_index, major_form in enumerate(major_activity_formset):
-                        if not major_form.cleaned_data:
-                            continue
+                    # ===== SAVE MAJOR ACTIVITIES CORRECTLY =====
+                    major_formset.instance = plan
+                    major_formset.save()
 
-                        if major_form.cleaned_data.get('DELETE', False):
-                            if major_form.instance.pk:
-                                major_form.instance.delete()
-                            continue
-
-                        major_activity = major_form.save(commit=False)
-                        major_activity.plan = plan
-                        major_activity.save()
-
-                        prefix = f'detail_activities-{major_index}'
-                        detail_fs = DetailActivityFormset(request.POST, instance=major_activity, prefix=prefix)
-                        detail_formsets_for_render[str(major_index)] = detail_fs
-
-                        if detail_fs.is_valid():
-                            details = detail_fs.save(commit=False)
-                            for deleted in detail_fs.deleted_objects:
-                                deleted.delete()
-                            for d in details:
-                                d.major_activity = major_activity
-                                d.save()
-                        else:
-                            raise ValueError(f"Detail Activity formset for major index {major_index} failed validation: {detail_fs.errors}")
+                    # ===== SAVE DETAIL ACTIVITIES (OPTION A) =====
+                    detail_map = parse_detail_activities(request.POST)
+                    for major_index, major in enumerate(plan.major_activities.all()):
+                        DetailActivity.objects.filter(major_activity=major).delete()
+                        for fields in detail_map.get(str(major_index), {}).values():
+                            if fields.get('DELETE') in ('on', '1', 'true'):
+                                continue
+                            if not fields.get('detail_activity'):
+                                continue
+                            DetailActivity.objects.create(
+                                major_activity=major,
+                                detail_activity=fields.get('detail_activity'),
+                                weight=fields.get('weight') or 0,
+                                responsible_person=fields.get('responsible_person'),
+                            )
 
                     return redirect('dashboard')
-
-            except ValueError as ve:
-                print(f"Nested Validation Failed: {ve}")
-                form.add_error(None, 'A nested activity failed validation. Please check the details.')
             except Exception as e:
-                print(f"Transaction failed: {e}")
-                form.add_error(None, 'An unexpected error occurred during saving.')
-
-        else:
-            # build detail_formsets_for_render from POST so template can show them with errors
-            try:
-                major_total = int(request.POST.get('major_activities-TOTAL_FORMS', 0))
-            except ValueError:
-                major_total = 0
-
-            for idx in range(major_total):
-                prefix = f'detail_activities-{idx}'
-                detail_formsets_for_render[str(idx)] = DetailActivityFormset(request.POST, prefix=prefix)
+                print(e)
+                form.add_error(None, 'Error updating plan.')
 
     else:
-        # GET request: build initial formsets and nested detail formsets for existing majors
         form = PlanCreationForm(instance=plan)
         goal_formset = StrategicGoalFormset(instance=plan, prefix='goal')
         kpi_formset = KPIFormset(instance=plan, prefix='kpis', form_kwargs=formset_kwargs)
-        major_activity_formset = MajorActivityFormset(instance=plan, prefix='major_activities')
+        major_formset = MajorActivityFormset(instance=plan, prefix='major_activities')
+    # ===== EMPTY DETAIL ACTIVITY FORM (for JS cloning) =====
+        empty_detail_formset = DetailActivityFormset(
+            prefix='detail_activities-__MAJOR_INDEX__'
+        )
 
-        # Build detail formsets for each existing major activity and map to index
-        for idx, major in enumerate(plan.major_activities.all()):
-            prefix = f'detail_activities-{idx}'
-            detail_formsets_for_render[str(idx)] = DetailActivityFormset(instance=major, prefix=prefix)
-
-    context = {
+        detail_form_template_html = render_to_string(
+            'plans/partials/detail_activity_form.html',
+            {
+                'detail_form': empty_detail_formset.empty_form,
+                'major_index': '__MAJOR_INDEX__',
+                'detail_index': '__INDEX__',
+            }
+        )
+    return render(request, 'plans/create_plan.html', {
         'form': form,
         'goal_formset': goal_formset,
         'kpi_formset': kpi_formset,
-        'major_activity_formset': major_activity_formset,
+        'major_activity_formset': major_formset,
+        'detail_formsets': {},
+        'detail_form_template_html': detail_form_template_html,
         'plan_instance': plan,
-        'detail_form_template_html': _get_detail_form_template(),
-        'detail_formsets': detail_formsets_for_render,
-    }
-    return render(request, 'plans/create_plan.html', context)
+    })

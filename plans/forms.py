@@ -1,12 +1,9 @@
 from django import forms
 from django.forms import inlineformset_factory
-#from django.forms.models import BaseInlineFormSet
+from django.forms.models import BaseInlineFormSet
 from django.core.exceptions import ValidationError
 from decimal import Decimal
-
-# Import all models needed for forms and formsets
 from .models import Plan, StrategicGoal, KPI, MajorActivity, DetailActivity
-
 from django.contrib.auth import get_user_model
 
 # Get the User Model for ForeignKey fields
@@ -15,6 +12,29 @@ User = get_user_model()
 # Base Tailwind class for inputs
 INPUT_CLASS = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out shadow-sm'
 
+class BaseDetailActivityFormSet(BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+
+        total_weight = Decimal("0.00")
+
+        for form in self.forms:
+            if self.can_delete and form.cleaned_data.get("DELETE"):
+                continue
+            if not form.cleaned_data:
+                continue
+
+            weight = form.cleaned_data.get("weight")
+            if weight:
+                total_weight += weight
+
+        major_weight = self.instance.weight
+
+        if total_weight != major_weight:
+            raise ValidationError(
+                f"Total detail activity weight ({total_weight}) "
+                f"must equal major activity weight ({major_weight})."
+            )
 class PlanCreationForm(forms.ModelForm):
     """
     The main form for the Plan model, which will be used in conjunction with the formsets.
@@ -209,9 +229,10 @@ class DetailActivityForm(forms.ModelForm):
 
 
 DetailActivityFormset = inlineformset_factory(
-    MajorActivity, # Parent model
-    DetailActivity, # Child model
+    MajorActivity,
+    DetailActivity,
     form=DetailActivityForm,
+    formset=BaseDetailActivityFormSet,
     extra=1,
     can_delete=True
 )

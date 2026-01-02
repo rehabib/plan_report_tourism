@@ -13,25 +13,25 @@
     -->
     <div class="mb-8 p-4 border border-gray-200 rounded-xl bg-gray-50">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            
+
             <!-- Plan Title & Period -->
             <div class="flex-1">
                 <h2 class="text-2xl font-bold text-gray-800 mb-1">
                     {{ plan.plan_type|capfirst }} Plan
                     for
                     {% if plan.plan_type == 'yearly' %}
-                        {{ plan.year }}
+                    {{ plan.year }}
                     {% elif plan.plan_type == 'quarterly' %}
-                        Q{{ plan.quarter_number }} - {{ plan.year }}
+                    Q{{ plan.quarter_number }} - {{ plan.year }}
                     {% elif plan.plan_type == 'monthly' %}
-                        {{ plan.month|date:"F" }} - {{ plan.year }}
+                    {{ plan.month|date:"F" }} - {{ plan.year }}
                     {% elif plan.plan_type == 'weekly' %}
-                        Week {{ plan.week_number }} - {{ plan.month|date:"F" }} - {{ plan.year }}
+                    Week {{ plan.week_number }} - {{ plan.month|date:"F" }} - {{ plan.year }}
                     {% endif %}
                 </h2>
                 <div class="flex items-center space-x-4 text-sm mt-2">
-                    <p class="text-gray-600 font-medium">Level: <span class="font-semibold text-gray-800">{{ plan.level|capfirst }}</span></p>
-                    
+                    <p class="text-gray-600 font-medium">Level: <span class="font-semibold text-gray-800">{{plan.level|capfirst }}</span></p>
+
                     <!-- Status Badge -->
                     <p class="font-bold text-sm px-3 py-1 rounded-full 
                         {% if plan.status == 'APPROVED' %}bg-green-100 text-green-700
@@ -46,26 +46,31 @@
             <!-- Action Buttons -->
             <div class="flex space-x-3 mt-3 md:mt-0">
                 {% if user.is_authenticated and plan.user == request.user %}
-                    <!-- Edit Button -->
-                    <a href="{% url 'edit_plan' plan.id %}" class="bg-blue-600 text-white font-medium py-2 px-4 rounded-full hover:bg-blue-700 transition-all duration-300 flex items-center shadow-md hover:shadow-lg transform hover:scale-105 text-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-7.243 7.242-2.828 2.828L.757 16.243a1 1 0 01-.707-1.707l14-14z" />
-                        </svg>
-                        Edit Plan
-                    </a>
+                <!-- Edit Button -->
+                <a href="{% url 'edit_plan' plan.id %}"
+                    class="bg-blue-600 text-white font-medium py-2 px-4 rounded-full hover:bg-blue-700 transition-all duration-300 flex items-center shadow-md hover:shadow-lg transform hover:scale-105 text-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20"
+                        fill="currentColor">
+                        <path
+                            d="M13.586 3.586a2 2 0 112.828 2.828l-7.243 7.242-2.828 2.828L.757 16.243a1 1 0 01-.707-1.707l14-14z" />
+                    </svg>
+                    Edit Plan
+                </a>
                 {% endif %}
                 <!-- Back Button -->
-                <a href="{% url 'dashboard' %}" class="bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-full hover:bg-gray-400 transition-colors shadow-md text-sm">
+                <a href="{% url 'dashboard' %}"
+                    class="bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-full hover:bg-gray-400 transition-colors shadow-md text-sm">
                     Back to Dashboard
                 </a>
             </div>
         </div>
-        
+
         <!-- Review Comments Block -->
         {% if plan.review_comments %}
-            <blockquote class="text-sm italic text-gray-700 mt-4 p-3 border-l-4 border-yellow-500 bg-yellow-50 rounded-r-lg">
-                <span class="font-bold text-yellow-800">Review Comments:</span> "{{ plan.review_comments }}"
-            </blockquote>
+        <blockquote
+            class="text-sm italic text-gray-700 mt-4 p-3 border-l-4 border-yellow-500 bg-yellow-50 rounded-r-lg">
+            <span class="font-bold text-yellow-800">Review Comments:</span> "{{ plan.review_comments }}"
+        </blockquote>
         {% endif %}
     </div>
 
@@ -79,17 +84,20 @@
     <h3 class="text-2xl font-bold text-gray-800 mt-6 mb-4">1. Strategic Goals</h3>
     <ul class="list-none space-y-3 mb-8 pl-4 border-l-4 border-blue-100">
         {% for goal in goals %}
-            <li class="text-gray-700 flex items-start">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500 mr-2 flex-shrink-0 mt-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                <span class="font-medium text-gray-800">{{ goal.title }}</span>
-            </li>
+        <li class="text-gray-700 flex items-start">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500 mr-2 flex-shrink-0 mt-1"
+                viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clip-rule="evenodd" />
+            </svg>
+            <span class="font-medium text-gray-800">{{ goal.title }}</span>
+        </li>
         {% empty %}
-            <li class="text-gray-500 italic">No strategic goals defined.</li>
+        <li class="text-gray-500 italic">No strategic goals defined.</li>
         {% endfor %}
     </ul>
-    
+
     <!-- 
     ===================================================================
     SECTION 3: KEY PERFORMANCE INDICATORS (KPIs)
@@ -100,63 +108,69 @@
     <h3 class="text-2xl font-bold text-gray-800 mt-6 mb-4">2. Key Performance Indicators (KPIs)</h3>
     <div class="space-y-6 mb-8">
         {% for kpi in kpis %}
-            <div class="border-2 border-green-200 p-5 rounded-xl bg-white shadow-lg">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 border-b pb-3">
-                    <p class="font-bold text-xl text-gray-800">{{ kpi.name }}</p>
-                    <p class="text-sm font-medium border border-green-300 bg-green-50 text-green-700 px-3 py-1 rounded-full mt-2 sm:mt-0">
-                        Measure: {{ kpi.measurement|default:"N/A" }}
-                    </p>
-                </div>
-                
-                <!-- KPI Core Metrics -->
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                    <!-- Baseline -->
-                    <div class="border-r border-gray-100 pr-2">
-                        <span class="font-medium text-gray-600 block text-sm">Baseline</span>
-                        <span class="text-gray-900 font-extrabold text-2xl">{{ kpi.baseline|default:"-" }}</span>
-                    </div>
-                    <!-- Target -->
-                    <div class="border-r border-gray-100 pr-2">
-                        <span class="font-medium text-gray-600 block text-sm">Target</span>
-                        <span class="text-blue-600 font-extrabold text-2xl">{{ kpi.target|default:"-" }}</span>
-                    </div>
-                    <!-- Latest Value (Placeholder for reporting) -->
-                    <div class="border-r border-gray-100 pr-2">
-                        <span class="font-medium text-gray-600 block text-sm">Latest Value</span>
-                        <span class="text-yellow-600 font-extrabold text-2xl">{{ kpi.latest_report.value|default:"0" }}</span>
-                    </div>
-                     <!-- Progress (Placeholder for reporting) -->
-                    <div>
-                        <span class="font-medium text-gray-600 block text-sm">Progress %</span>
-                        <span class="text-gray-900 font-extrabold text-2xl">{{ kpi.progress_percentage|floatformat:0|default:"0" }}%</span>
-                    </div>
-                </div>
-
-                <!-- Quarterly Targets (Only for Yearly/Quarterly Plans) -->
-                {% if plan.plan_type == 'yearly' or plan.plan_type == 'quarterly' %}
-                    <div class="mt-5 pt-4 border-t border-gray-200 bg-gray-50 p-3 rounded-lg">
-                        <p class="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Quarterly Targets:</p>
-                        <div class="grid grid-cols-4 gap-4 text-center text-sm">
-                            <div class="border-r border-gray-200"><span class="font-medium text-gray-700 block">Q1</span><span class="text-gray-900 font-semibold">{{ kpi.target_q1|default:"-" }}</span></div>
-                            <div class="border-r border-gray-200"><span class="font-medium text-gray-700 block">Q2</span><span class="text-gray-900 font-semibold">{{ kpi.target_q2|default:"-" }}</span></div>
-                            <div class="border-r border-gray-200"><span class="font-medium text-gray-700 block">Q3</span><span class="text-gray-900 font-semibold">{{ kpi.target_q3|default:"-" }}</span></div>
-                            <div><span class="font-medium text-gray-700 block">Q4</span><span class="text-gray-900 font-semibold">{{ kpi.target_q4|default:"-" }}</span></div>
-                        </div>
-                    </div>
-                {% endif %}
-                
-                {% if not kpi.latest_report %}
-                    <p class="text-red-500 text-xs mt-3 bg-red-50 p-2 rounded-md border border-red-200">
-                        <span class="font-bold">Attention:</span> Tracking data not available. Create a report to track progress for this KPI.
-                    </p>
-                {% endif %}
-                
+        <div class="border-2 border-green-200 p-5 rounded-xl bg-white shadow-lg">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 border-b pb-3">
+                <p class="font-bold text-xl text-gray-800">{{ kpi.name }}</p>
+                <p
+                    class="text-sm font-medium border border-green-300 bg-green-50 text-green-700 px-3 py-1 rounded-full mt-2 sm:mt-0">
+                    Measure: {{ kpi.measurement|default:"N/A" }}
+                </p>
             </div>
+
+            <!-- KPI Core Metrics -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <!-- Baseline -->
+                <div class="border-r border-gray-100 pr-2">
+                    <span class="font-medium text-gray-600 block text-sm">Baseline</span>
+                    <span class="text-gray-900 font-extrabold text-2xl">{{ kpi.baseline|default:"-" }}</span>
+                </div>
+                <!-- Target -->
+                <div class="border-r border-gray-100 pr-2">
+                    <span class="font-medium text-gray-600 block text-sm">Target</span>
+                    <span class="text-blue-600 font-extrabold text-2xl">{{ kpi.target|default:"-" }}</span>
+                </div>
+                <!-- #Latest Value (Placeholder for reporting)  -->
+                <div class="border-r border-gray-100 pr-2">
+                    <span class="font-medium text-gray-600 block text-sm">Latest Value</span>
+                    <span class="text-yellow-600 font-extrabold text-2xl">{{ kpi.latest_report.value|default:"0"}}</span>
+                </div>
+                <!-- #Progress (Placeholder for reporting) -->
+                 <div>
+                    <span class="font-medium text-gray-600 block text-sm">Progress %</span>
+                    <span class="text-gray-900 font-extrabold text-2xl">{{kpi.progress_percentage|floatformat:0|default:"0" }}%</span>
+                </div>
+            </div>  
+
+            <!-- Quarterly Targets (Only for Yearly/Quarterly Plans) -->
+            {% if plan.plan_type == 'yearly' or plan.plan_type == 'quarterly' %}
+            <div class="mt-5 pt-4 border-t border-gray-200 bg-gray-50 p-3 rounded-lg">
+                <p class="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Quarterly Targets:</p>
+                <div class="grid grid-cols-4 gap-4 text-center text-sm">
+                    <div class="border-r border-gray-200"><span class="font-medium text-gray-700 block">Q1</span><span
+                            class="text-gray-900 font-semibold">{{ kpi.target_q1|default:"-" }}</span></div>
+                    <div class="border-r border-gray-200"><span class="font-medium text-gray-700 block">Q2</span><span
+                            class="text-gray-900 font-semibold">{{ kpi.target_q2|default:"-" }}</span></div>
+                    <div class="border-r border-gray-200"><span class="font-medium text-gray-700 block">Q3</span><span
+                            class="text-gray-900 font-semibold">{{ kpi.target_q3|default:"-" }}</span></div>
+                    <div><span class="font-medium text-gray-700 block">Q4</span><span
+                            class="text-gray-900 font-semibold">{{ kpi.target_q4|default:"-" }}</span></div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if not kpi.latest_report %}
+            <p class="text-red-500 text-xs mt-3 bg-red-50 p-2 rounded-md border border-red-200">
+                <span class="font-bold">Attention:</span> Tracking data not available. Create a report to track progress
+                for this KPI.
+            </p>
+            {% endif %}
+
+        </div>
         {% empty %}
-            <p class="text-gray-500 italic">No KPIs defined.</p>
+        <p class="text-gray-500 italic">No KPIs defined.</p>
         {% endfor %}
     </div>
-    
+
     <!-- 
     ===================================================================
     SECTION 4: MAJOR ACTIVITIES & SUB-TASKS
@@ -166,75 +180,74 @@
 
     <h3 class="text-2xl font-bold text-gray-800 mt-6 mb-4">3. Major Activities & Sub-Tasks</h3>
     <p class="text-gray-600 mb-6">Total Planned Budget for Plan: <span class="font-bold text-2xl text-green-700">${{ plan.total_budget|floatformat:2 }}</span></p>
+    
 
     <div class="space-y-8">
         {# LOOP THROUGH MAJOR ACTIVITIES #}
         {% for major_activity in major_activities %}
-            <div class="border-2 border-yellow-400 p-5 rounded-xl bg-yellow-50 shadow-xl transition-all duration-300">
-                
-                <!-- Major Activity Header -->
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 pb-3 border-b-2 border-yellow-300">
-                    <h4 class="font-extrabold text-xl text-yellow-800">
-                        Activity {{ forloop.counter }}: {{ major_activity.name }}
-                    </h4>
-                    
-                    <div class="flex space-x-4 text-sm mt-3 sm:mt-0">
-                        <div class="text-center bg-white p-2 rounded-lg shadow-sm">
-                            <span class="font-medium text-gray-600 block text-xs">Weight</span>
-                            <span class="text-gray-900 font-bold text-lg">{{ major_activity.weight|floatformat:0|default:"0" }}%</span>
-                        </div>
-                        <div class="text-center bg-white p-2 rounded-lg shadow-sm">
-                            <span class="font-medium text-gray-600 block text-xs">Budget</span>
-                            <span class="text-green-700 font-bold text-lg">${{ major_activity.budget|floatformat:2 }}</span>
-                        </div>
+        <div class="border-2 border-yellow-400 p-5 rounded-xl bg-yellow-50 shadow-xl transition-all duration-300">
+
+            <!-- Major Activity Header -->
+            <div
+                class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 pb-3 border-b-2 border-yellow-300">
+                <h4 class="font-extrabold text-xl text-yellow-800">
+                    Activity {{ forloop.counter }}: {{ major_activity.major_activity }}
+                </h4>
+
+                <div class="flex space-x-4 text-sm mt-3 sm:mt-0">
+                    <div class="text-center bg-white p-2 rounded-lg shadow-sm">
+                        <span class="font-medium text-gray-600 block text-xs">Weight</span>
+                        <span class="text-gray-900 font-bold text-lg">{{ major_activity.weight|floatformat:0|default:"0"}}%</span>
+                    </div>
+                    <div class="text-center bg-white p-2 rounded-lg shadow-sm">
+                        <span class="font-medium text-gray-600 block text-xs">Budget</span>
+                        <span class="text-green-700 font-bold text-lg">${{ major_activity.budget|floatformat:2 }}</span>
                     </div>
                 </div>
+            </div>
 
-                <!-- Detailed Steps (Sub-Tasks) -->
-                <div class="pt-3">
-                    <p class="text-lg font-semibold text-gray-700 mb-3 ml-2">Detailed Steps (Sub-Tasks):</p>
-                    <div class="space-y-4 pl-4 border-l-4 border-yellow-200">
-                        
-                        {# NESTED LOOP THROUGH DETAIL ACTIVITIES #}
-                        {% for detail_activity in major_activity.detail_activities.all %}
-                            <div class="p-4 bg-white border border-yellow-200 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200">
-                                
-                                <div class="flex justify-between items-start mb-2">
-                                    <!-- Task Description & Numbering -->
-                                    <p class="font-semibold text-gray-800 flex-1 pr-4">
-                                        {{ forloop.parentloop.counter }}.{{ forloop.counter }} {{ detail_activity.description }}
-                                    </p>
-                                    
-                                    <!-- Status Badge -->
-                                    <span class="text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap
+            <!-- Detailed Steps (Sub-Tasks) -->
+            <div class="pt-3">
+                <p class="text-lg font-semibold text-gray-700 mb-3 ml-2">Detailed Steps (Sub-Tasks):</p>
+                <div class="space-y-4 pl-4 border-l-4 border-yellow-200">
+
+                    {# NESTED LOOP THROUGH DETAIL ACTIVITIES #}
+                    {% for detail_activity in major_activity.detail_activities.all %}
+                    <div
+                        class="p-4 bg-white border border-yellow-200 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200">
+
+                        <div class="flex justify-between items-start mb-2">
+                            <!-- Task Description & Numbering -->
+                            <p class="font-semibold text-gray-800 flex-1 pr-4">
+                                {{ forloop.parentloop.counter }}.{{ forloop.counter }} {{detail_activity.detail_activity }}
+                            </p>
+
+                            <!-- Status Badge -->
+                            <span class="text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap
                                         {% if detail_activity.status == 'COMPLETED' %}bg-green-100 text-green-700
                                         {% elif detail_activity.status == 'IN_PROGRESS' %}bg-blue-100 text-blue-700
                                         {% else %}bg-gray-100 text-gray-600
                                         {% endif %}">
-                                        {{ detail_activity.get_status_display }}
-                                    </span>
-                                </div>
-                                
-                                <div class="flex justify-between items-center text-sm text-gray-600">
-                                    <p>Responsible: <span class="font-medium text-gray-800">{{ detail_activity.responsible_person }}</span></p>
-                                    <p>Weight: <span class="font-medium text-gray-800">{{ detail_activity.weight|floatformat:0|default:"N/A" }}%</span></p>
-                                </div>
-                                
-                                {% if detail_activity.notes %}
-                                    <p class="text-xs italic text-gray-500 mt-2 p-2 border-t pt-1">
-                                        <span class="font-semibold">Notes:</span> {{ detail_activity.notes }}
-                                    </p>
-                                {% endif %}
-                            </div>
-                        {% empty %}
-                            <p class="text-gray-500 text-sm italic p-2">No detailed sub-tasks defined for this major activity.</p>
-                        {% endfor %}
-                    </div>
-                </div>
+                                {{ detail_activity.get_status_display }}
+                            </span>
+                        </div>
 
+                        <div class="flex justify-between items-center text-sm text-gray-600">
+                        <p>Responsible: <span class="font-medium text-gray-800">{{ detail_activity.responsible_person }}</span></p>
+                        <p>Weight: <span class="font-medium text-gray-800">{{ detail_activity.weight|floatformat:0 }}%</span></p>
+                        </div>
+
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-500 text-sm italic p-2">No detailed sub-tasks defined for this major activity.
+                    </p>
+                    {% endfor %}
+                </div>
             </div>
+
+        </div>
         {% empty %}
-            <p class="text-gray-500 italic">No major activities defined for this plan.</p>
+        <p class="text-gray-500 italic">No major activities defined for this plan.</p>
         {% endfor %}
     </div>
 
