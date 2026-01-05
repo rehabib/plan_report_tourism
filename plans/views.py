@@ -16,6 +16,12 @@ from .forms import (
     KPIFormset, 
     MajorActivityFormset, 
     DetailActivityFormset,
+    PlanCreationForm,
+    StrategicGoalForm,
+    KPIForm,
+    MajorActivityForm,
+    DetailActivityForm,
+    BaseDetailActivityFormSet
    
 )
 
@@ -333,70 +339,114 @@ def edit_plan(request, plan_id):
     plan_type = request.POST.get('plan_type') or plan.plan_type
     formset_kwargs = {'plan_type': plan_type} if plan_type else {}
 
+    # ---------- FORMSETS FOR EDIT ----------
+    StrategicGoalFormsetEdit = inlineformset_factory(
+        Plan, StrategicGoal,
+        form=StrategicGoalForm,
+        extra=0,
+        can_delete=True
+    )
+
+    KPIFormsetEdit = inlineformset_factory(
+        Plan, KPI,
+        form=KPIForm,
+        extra=0,
+        can_delete=True
+    )
+
+    MajorActivityFormsetEdit = inlineformset_factory(
+        Plan, MajorActivity,
+        form=MajorActivityForm,
+        extra=0,
+        can_delete=True
+    )
+
+    DetailActivityFormsetEdit = inlineformset_factory(
+        MajorActivity, DetailActivity,
+        form=DetailActivityForm,
+        formset=BaseDetailActivityFormSet,
+        extra=0,
+        can_delete=True
+    )
+
+    # ---------- POST ----------
     if request.method == 'POST':
         form = PlanCreationForm(request.POST, instance=plan)
-        goal_formset = StrategicGoalFormset(request.POST, instance=plan, prefix='goal')
-        kpi_formset = KPIFormset(request.POST, instance=plan, prefix='kpis', form_kwargs=formset_kwargs)
-        major_formset = MajorActivityFormset(request.POST, instance=plan, prefix='major_activities')
+        goal_formset = StrategicGoalFormsetEdit(request.POST, instance=plan, prefix='goal')
+        kpi_formset = KPIFormsetEdit(request.POST, instance=plan, prefix='kpis', form_kwargs=formset_kwargs)
+        major_formset = MajorActivityFormsetEdit(request.POST, instance=plan, prefix='major_activities')
 
         if form.is_valid() and goal_formset.is_valid() and kpi_formset.is_valid() and major_formset.is_valid():
             try:
                 with transaction.atomic():
                     form.save()
                     goal_formset.save()
-
+                    # Handle KPI quarterly fields
                     if plan_type and plan_type != 'yearly':
                         for kpi_form in kpi_formset:
-                            if not kpi_form.cleaned_data.get('DELETE'):
-                                kpi_form.instance.target_q1 = 0
-                                kpi_form.instance.target_q2 = 0
-                                kpi_form.instance.target_q3 = 0
-                                kpi_form.instance.target_q4 = 0
+                             if not kpi_form.cleaned_data.get('DELETE'):
+                                 kpi_form.instance.target_q1 = 0
+                                 kpi_form.instance.target_q2 = 0
+                                 kpi_form.instance.target_q3 = 0
+                                 kpi_form.instance.target_q4 = 0
                     kpi_formset.save()
-
-                    # ===== SAVE MAJOR ACTIVITIES CORRECTLY =====
-                    major_formset.instance = plan
                     major_formset.save()
+# ---------- SAVE DETAIL ACTIVITIES ----------
+                detail_map = parse_detail_activities(request.POST)
 
-                    # ===== SAVE DETAIL ACTIVITIES (OPTION A) =====
-                    detail_map = parse_detail_activities(request.POST)
-                    for major_index, major in enumerate(plan.major_activities.all()):
-                        DetailActivity.objects.filter(major_activity=major).delete()
-                        for fields in detail_map.get(str(major_index), {}).values():
-                            if fields.get('DELETE') in ('on', '1', 'true'):
-                                continue
-                            if not fields.get('detail_activity'):
-                                continue
-                            DetailActivity.objects.create(
-                                major_activity=major,
-                                detail_activity=fields.get('detail_activity'),
-                                weight=fields.get('weight') or 0,
-                                responsible_person=fields.get('responsible_person'),
-                            )
+                for major_index, major_form in enumerate(major_formset.forms):
+                    if major_form.cleaned_data.get('DELETE'):
+                        continue
 
-                    return redirect('dashboard')
+                    major = major_form.instance
+
+                    # Remove old details
+                    DetailActivity.objects.filter(major_activity=major).delete()
+
+                    for fields in detail_map.get(str(major_index), {}).values():
+                        if fields.get('DELETE') in ('on', '1', 'true'):
+                            continue
+
+                        if not fields.get('detail_activity'):
+                            continue
+
+                        user_id = fields.get('responsible_person')
+                        responsible_user = User.objects.filter(id=user_id).first() if user_id else None
+
+                        DetailActivity.objects.create(
+                            major_activity=major,
+                            detail_activity=fields.get('detail_activity'),
+                            weight=fields.get('weight') or 0,
+                            responsible_person=responsible_user,
+                            status=fields.get('status', 'PENDING')
+                        )
+
+                return redirect('dashboard')
             except Exception as e:
                 print(e)
                 form.add_error(None, 'Error updating plan.')
 
+    # ---------- GET ----------
     else:
         form = PlanCreationForm(instance=plan)
-        goal_formset = StrategicGoalFormset(instance=plan, prefix='goal')
-        kpi_formset = KPIFormset(instance=plan, prefix='kpis', form_kwargs=formset_kwargs)
-        major_formset = MajorActivityFormset(instance=plan, prefix='major_activities')
-    # ===== EMPTY DETAIL ACTIVITY FORM (for JS cloning) =====
-        empty_detail_formset = DetailActivityFormset(
-            prefix='detail_activities-__MAJOR_INDEX__'
-        )
+        goal_formset = StrategicGoalFormsetEdit(instance=plan, prefix='goal')
+        kpi_formset = KPIFormsetEdit(instance=plan, prefix='kpis', form_kwargs=formset_kwargs)
+        major_formset = MajorActivityFormsetEdit(instance=plan, prefix='major_activities')
 
-        detail_form_template_html = render_to_string(
-            'plans/partials/detail_activity_form.html',
-            {
-                'detail_form': empty_detail_formset.empty_form,
-                'major_index': '__MAJOR_INDEX__',
-                'detail_index': '__INDEX__',
-            }
-        )
+    # ---------- ALWAYS AVAILABLE ----------
+    empty_detail_formset = DetailActivityFormsetEdit(
+        prefix='detail_activities-__MAJOR_INDEX__'
+    )
+
+    detail_form_template_html = render_to_string(
+        'plans/partials/detail_activity_form.html',
+        {
+            'detail_form': empty_detail_formset.empty_form,
+            'major_index': '__MAJOR_INDEX__',
+            'detail_index': '__INDEX__',
+        }
+    )
+
     return render(request, 'plans/create_plan.html', {
         'form': form,
         'goal_formset': goal_formset,
