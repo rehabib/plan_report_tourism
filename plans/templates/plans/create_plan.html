@@ -380,8 +380,6 @@
                         </div>
 
                         <div class="detail-management-container" data-major-index="{{ forloop.counter0 }}">
-                            {# If we have a detail_formset for this major, render its management form so JS has
-                            TOTAL/INITIAL inputs #}
                             {% if detail_formsets and detail_formsets.forloop.counter0 %}
                             {# Not used - fallback below #}
                             {% endif %}

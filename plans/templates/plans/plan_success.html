@@ -1,6 +1,10 @@
+{% extends "plans/base.html" %}
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plan Created Successfully</title>
@@ -16,6 +20,7 @@
     </style>
 </head>
 <body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
+{% block content %}    
     <!-- Success Card Container -->
     <div class="bg-white p-8 sm:p-10 rounded-2xl shadow-2xl max-w-md w-full text-center border border-green-100">
         
@@ -60,5 +65,7 @@
             </a>
         </div>
     </div>
+{% endblock %}    
 </body>
 </html>
+
