@@ -1,0 +1,26 @@
+<h3>KPI Performance Report</h3>
+
+<form method="post">
+  {% csrf_token %}
+  {{ kpi_formset.management_form }}
+
+  <table>
+    <tr>
+      <th>KPI</th>
+      <th>Target</th>
+      <th>Actual</th>
+      <th>Remark</th>
+    </tr>
+
+    {% for form in kpi_formset %}
+    <tr>
+      <td>{{ form.instance.kpi.name }}</td>
+      <td>{{ form.expected_target }}</td>
+      <td>{{ form.actual_value }}</td>
+      <td>{{ form.remark }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <button type="submit">Submit Report</button>
+</form>

@@ -1,3 +1,4 @@
+from .utils import get_kpi_target
 from django.db import models
 from django.conf import settings
 from plans.models import Plan, KPI, MajorActivity, DetailActivity
@@ -66,10 +67,16 @@ class KPIReport(models.Model):
     remark = models.TextField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
-        if self.kpi.target:
+        plan = self.report.plan
+        target = get_kpi_target(self.kpi, plan)
+
+        if target and target > 0:
             self.achievement_percent = round(
-                (self.actual_value / self.kpi.target) * 100, 2
+                (self.actual_value / target) * 100, 2
             )
+        else:
+            self.achievement_percent = 0
+
         super().save(*args, **kwargs)
 
 
