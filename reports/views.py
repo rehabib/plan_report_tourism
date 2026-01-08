@@ -1,64 +1,58 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from .forms import ReportCreationForm
+from django.db import transaction
 from plans.models import Plan
-from .models import Report
+from .models import Report, KPIReport, MajorActivityReport
+from .forms import ReportForm, KPIReportFormSet, MajorActivityReportFormSet
+
+
 
 @login_required
 def create_report(request, plan_id):
-    """
-    Handles the creation of a new report for a given plan.
-    """
-    plan = get_object_or_404(Plan, pk=plan_id)
+    plan = get_object_or_404(Plan, id=plan_id, status="APPROVED")
 
-    # Security check to ensure the user has permission to report on this plan
-    user_role = request.user.role.lower()
-    has_permission = False
-    if user_role == 'corporate' or user_role == 'department' or plan.user == request.user:
-        has_permission = True
-    
-    if not has_permission:
-        # Redirect or show an error if the user doesn't have permission
-        return redirect('dashboard') # Or render a permission denied page
+    report, created = Report.objects.get_or_create(
+        plan=plan,
+        user=request.user,
+        reporting_period=plan.plan_type
+    )
 
-    if request.method == 'POST':
-        form = ReportCreationForm(request.POST)
-        if form.is_valid():
-            report = form.save(commit=False)
-            report.plan = plan
-            # Set other fields like goal, kpi based on form and plan data
-            report.save()
-            return redirect('dashboard') # Redirect to dashboard or a reports list page
+    if request.method == "POST":
+        form = ReportForm(request.POST, instance=report)
+        kpi_formset = KPIReportFormSet(request.POST, instance=report)
+        activity_formset = MajorActivityReportFormSet(request.POST, instance=report)
+
+        if form.is_valid() and kpi_formset.is_valid() and activity_formset.is_valid():
+            with transaction.atomic():
+                form.save()
+                kpi_formset.save()
+                activity_formset.save()
+                report.status = "SUBMITTED"
+                report.save()
+            return redirect("view_report", report.id)
+
     else:
-        # Pre-populate the plan field for convenience
-        form = ReportCreationForm(initial={'plan': plan})
+        form = ReportForm(instance=report)
 
-    context = {
-        'form': form,
-        'plan': plan,
-    }
-    return render(request, 'reports/create_report.html', context)
+        # Auto-create KPI & activity report rows
+        for kpi in plan.kpis.all():
+            KPIReport.objects.get_or_create(report=report, kpi=kpi)
 
-@login_required
-def list_reports(request):
-    """
-    Displays a list of reports based on the user's role.
-    """
-    user_role = request.user.role.lower()
-    reports = Report.objects.none()
+        for act in plan.major_activities.all():
+            MajorActivityReport.objects.get_or_create(
+                report=report,
+                major_activity=act
+            )
 
-    if user_role == 'corporate':
-        reports = Report.objects.all().order_by('-created_at')
-    elif user_role == 'department':
-        # Department can see their own plan's reports and all individual reports
-        reports = Report.objects.filter(
-            Q(plan__user=request.user) | Q(plan__level='individual')
-        ).order_by('-created_at')
-    elif user_role == 'individual':
-        reports = Report.objects.filter(plan__user=request.user).order_by('-created_at')
+        kpi_formset = KPIReportFormSet(instance=report)
+        activity_formset = MajorActivityReportFormSet(instance=report)
 
-    context = {
-        'reports': reports,
-        'user_role': user_role
-    }
-    return render(request, 'reports/list_reports.html', context)
+    return render(request, "reports/create_report.html", {
+        "plan": plan,
+        "form": form,
+        "kpi_formset": kpi_formset,
+        "activity_formset": activity_formset,
+    })
+
+
+
