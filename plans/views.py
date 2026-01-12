@@ -500,4 +500,18 @@ def edit_plan(request, plan_id):
         'plan_instance': plan,
     })
 
+@login_required
+def submit_plan(request, plan_id):
+    plan = get_object_or_404(Plan, id=plan_id)
+
+    # Only owner can submit
+    if plan.user != request.user:
+        raise Http404("You do not have permission to submit this plan.")
+
+    # Only draft plans can be submitted
+    if plan.status == "PENDING":
+        plan.status = "SUBMITTED"
+        plan.save()
+
+    return redirect("dashboard")
 

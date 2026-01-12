@@ -62,17 +62,22 @@ class KPIReport(models.Model):
         on_delete=models.CASCADE
     )
 
-    actual_value = models.FloatField()
-    achievement_percent = models.FloatField(help_text="Calculated %")
+    actual_value = models.FloatField(null=True, blank=True)
+    achievement_percent = models.FloatField(help_text="Calculated %", default=0)
     remark = models.TextField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
+        if self.actual_value is None:
+            self.achievement_percent = 0
+            super().save(*args, **kwargs)
+            return
+
         plan = self.report.plan
         target = get_kpi_target(self.kpi, plan)
 
         if target and target > 0:
             self.achievement_percent = round(
-                (self.actual_value / target) * 100, 2
+                (self.actual_value / float(target)) * 100, 2
             )
         else:
             self.achievement_percent = 0
@@ -95,6 +100,8 @@ class MajorActivityReport(models.Model):
     progress = models.DecimalField(
         max_digits=5,
         decimal_places=2,
+        null=True,
+        blank=True,
         help_text="Completion percentage"
     )
 

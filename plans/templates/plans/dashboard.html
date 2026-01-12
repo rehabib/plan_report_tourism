@@ -76,24 +76,11 @@
                                 {{ plan.get_status_display }}
                             </span>
 
-                            <!-- <td class="px-6 py-4 text-right space-x-2">
-                            <a href="{% url 'view_plan' plan.pk %}"
-                                class="font-medium text-blue-600 hover:underline">View</a>
-
-                            {% if user.is_authenticated and plan.user == request.user and plan.status != 'APPROVED' %}
-                                <a href="{% url 'edit_plan' plan.pk %}"
-                                    class="font-medium text-green-600 hover:underline">Edit</a>
-                                <button type="button" class="font-medium text-red-600 hover:underline delete-button"
-                                    data-delete-url="{% url 'delete_plan' plan.pk %}">Delete</button>
-                            {% endif %}
-
-                            {% if plan.status == 'APPROVED' %}
-                                <a href="{% url 'create_report' plan.id %}"
-                                    class="font-medium text-purple-600 hover:underline">Create Report</a>
-                            {% endif %}
-                        </td> -->
-
+                            
                         </td>
+
+                       
+
                         <td class="px-6 py-4">{{ plan.get_level_display }}</td>
                         <td class="px-6 py-4">{{ plan.get_plan_type_display }}</td>
                         <td class="px-6 py-4">{{ plan.year }}</td>
@@ -126,7 +113,16 @@
                                 class="font-medium text-green-600 hover:underline">Edit</a>
                             <button type="button" class="font-medium text-red-600 hover:underline delete-button"
                                 data-delete-url="{% url 'delete_plan' plan.pk %}">Delete</button>
+
+                            {% if plan.status == 'PENDING' %}
+                                    <a href="{% url 'submit_plan' plan.pk %}" class="font-medium text-indigo-600 hover:underline">Submit</a>
+                                {% endif %}
                             {% endif %}
+
+                            {% if plan.status == 'APPROVED' %}
+                                <a href="{% url 'create_report' plan.id %}" class="font-medium text-purple-600 hover:underline">Create Report</a>
+                            {% endif %}    
+                            
                         </td>
                     </tr>
                     {% endfor %}

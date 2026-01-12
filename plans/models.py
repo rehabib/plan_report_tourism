@@ -107,7 +107,7 @@ class MajorActivity(models.Model):
     )
 
     major_activity = models.CharField(max_length=255)
-    weight = models.DecimalField(max_digits=5, decimal_places=2)
+    weight = models.DecimalField(max_digits=5, decimal_places=2,default=0.00)
     budget = models.DecimalField(
     max_digits=10, 
     decimal_places=2, 
@@ -140,7 +140,7 @@ class DetailActivity(models.Model):
     )
 
     detail_activity = models.TextField()
-    weight = models.DecimalField(max_digits=5, decimal_places=2)  
+    weight = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
     responsible_person = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
