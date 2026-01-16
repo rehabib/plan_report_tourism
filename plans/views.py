@@ -9,7 +9,7 @@ from django.db.models import Q
 from django.http import Http404
 from django.forms import inlineformset_factory
 from django.db import transaction # Important for atomic nested saves
-from .models import Plan, StrategicGoal, KPI, MajorActivity, DetailActivity
+from .models import Department, Plan, StrategicGoal, KPI, MajorActivity, DetailActivity
 from .forms import (
     PlanCreationForm, 
     StrategicGoalFormset, 
@@ -52,73 +52,164 @@ def user_logout(request):
 @login_required
 def dashboard(request):
     """
-    Displays the dashboard with plans based on the user's role and selected filter.
+    Dashboard shows all plans the user is allowed to see:
+    - Own plans
+    - Plans waiting for user's approval
+    - Plans in user's organizational scope
     """
-    user_role = request.user.role.lower()
+
     user = request.user
-    # Updated prefetch to include the new activity structure for efficiency
-    prefetch_fields = ('goals', 'kpis', 'major_activities__detail_activities') 
-    base_query = Plan.objects.all().prefetch_related(*prefetch_fields).order_by('-year', '-month', '-week_number')
+    user_role = user.role.lower()
 
-    show_my_plans = request.GET.get('show', 'all') == 'my_plans'
-    selected_department_name = request.GET.get('department', '')
+    base_queryset = (
+        Plan.objects
+        .select_related("user")
+        .prefetch_related(
+            "goals",
+            "kpis",
+            "major_activities__detail_activities",
+        )
+        .order_by("-created_at")
+    )
 
+    show_my_plans = request.GET.get("show") == "my_plans"
+    selected_department = request.GET.get("department")
+
+    visibility = Q(user=user)  # 1️⃣ Own plans always visible
+
+    # 2️⃣ Plans waiting for user's approval
+    visibility |= Q(current_reviewer_role=user_role)
+
+    # Desk → Individual in same department
+    if user_role == "desk" and user.department:
+        visibility |= Q(level="individual", user__department=user.department)
+
+    # Department → Desk + Individual in same department
+    if user_role == "department" and user.department:
+        visibility |= Q(level__in=["desk","individual"], user__department=user.department)
+
+    # 4️⃣ Pillar heads see all plans in their pillar
+    if user_role in [
+        "corporate",
+        "state-minister-destination",
+        "state-minister-promotion",
+    ]:
+        visibility |= Q(pillar=user.pillar)
+
+    # 5️⃣ Strategic team sees submitted pillar plans
+    if user_role == "strategic-team":
+            visibility |= Q(level__in=["corporate","state-minister-destination","state-minister-promotion"],
+                            status="SUBMITTED",
+                            current_reviewer_role="strategic-team")
+    # 6️⃣ Minister sees plans approved by strategic team
+    if user_role == "minister":
+         visibility |= Q(level="strategic-team",
+            current_reviewer_role="minister"
+        )
+
+    plans = base_queryset.filter(visibility).distinct()
+
+    # ----------------------------
+    # FILTER: My Plans Only
+    # ----------------------------
     if show_my_plans:
-        plans = base_query.filter(user=request.user)
+        plans = plans.filter(user=user)
 
-    elif user_role == 'corporate':
-        if selected_department_name:
-            plans = base_query.filter(user__department__iexact=selected_department_name)
-        else:
-            plans = base_query
-    elif user_role == 'strategic-team':
-        plans = base_query.filter(
-            Q(user=request.user) |
-              Q(level__iexact='corporate') |
-                Q(level__iexact='md')
-        )
-
-    elif user_role == 'md':
-        plans = base_query.filter(
-            Q(user=request.user) |
-              Q(level__iexact='md') |
-              Q(user__md=request.user)
-        )   
-
-    elif user_role == 'department':
-        plans = base_query.filter(
-            Q(user=request.user) | 
-              Q(level__iexact='department', user__department__iexact=request.user.department)
- |
-              Q(level__iexact='desk')|
-              Q(level__iexact='individual', user__department=request.user.department)
-        )
-
-    elif user_role == 'desk':
-          
-                plans = base_query.filter(
-                    Q(user=user) |
-                    Q(level__iexact='desk', user__desk__iexact=request.user) |
-                    Q(level__iexact='individual', user__desk__iexact=request.user.desk)
-                )
-            
-    elif user_role == 'individual':
-            plans = base_query.filter(user=user)
-    else:
-        plans = Plan.objects.none() # Default safety
-
+    # ----------------------------
+    # FILTER: Department (Corporate only)
+    # ----------------------------
+    # Department filter for pillar heads (Corporate + State Ministers)
     all_departments = []
-    if user_role == 'corporate':
-        all_departments = User.objects.filter(department__isnull=False).values_list('department', flat=True).distinct()
+    if user_role in ["corporate", "state-minister-destination", "state-minister-promotion"]:
+        all_departments = (
+            Department.objects
+            .filter.filter(pillar__iexact=user_role)
+        .values_list("name", flat=True)
+    )
 
-    context = {
-        'user_role': user_role,
-        'plans': plans,
-        'show_my_plans': show_my_plans,
-        'all_departments': all_departments,
-        'selected_department': selected_department_name,
-    }
-    return render(request, 'plans/dashboard.html', context)
+        if selected_department:
+            plans = plans.filter(user__department__name__iexact=selected_department)
+
+
+    return render(request, "plans/dashboard.html", {
+        "plans": plans,
+        "user_role": user_role,
+        "show_my_plans": show_my_plans,
+        "all_departments": all_departments,
+        "selected_department": selected_department,
+    })
+
+
+# @login_required
+# def dashboard(request):
+#     """
+#     Displays the dashboard with plans based on the user's role and selected filter.
+#     """
+#     user_role = request.user.role.lower()
+#     user = request.user
+#     # Updated prefetch to include the new activity structure for efficiency
+#     prefetch_fields = ('goals', 'kpis', 'major_activities__detail_activities') 
+#     base_query = Plan.objects.all().prefetch_related(*prefetch_fields).order_by('-year', '-month', '-week_number')
+
+#     show_my_plans = request.GET.get('show', 'all') == 'my_plans'
+#     selected_department_name = request.GET.get('department', '')
+
+#     if show_my_plans:
+#         plans = base_query.filter(user=request.user)
+
+#     elif user_role == 'corporate':
+#         if selected_department_name:
+#             plans = base_query.filter(user__department__iexact=selected_department_name)
+#         else:
+#             plans = base_query
+#     elif user_role == 'strategic-team':
+#         plans = base_query.filter(
+#             Q(user=request.user) |
+#               Q(level__iexact='corporate') |
+#                 Q(level__iexact='md')
+#         )
+
+#     elif user_role == 'md':
+#         plans = base_query.filter(
+#             Q(user=request.user) |
+#               Q(level__iexact='md') |
+#               Q(user__md=request.user)
+#         )   
+
+#     elif user_role == 'department':
+#         plans = base_query.filter(
+#             Q(user=request.user) | 
+#               Q(level__iexact='department', user__department__iexact=request.user.department)
+#  |
+#               Q(level__iexact='desk')|
+#               Q(level__iexact='individual', user__department=request.user.department)
+#         )
+
+#     elif user_role == 'desk':
+          
+#                 plans = base_query.filter(
+#                     Q(user=user) |
+#                     Q(level__iexact='desk', user__desk__iexact=request.user) |
+#                     Q(level__iexact='individual', user__desk__iexact=request.user.desk)
+#                 )
+            
+#     elif user_role == 'individual':
+#             plans = base_query.filter(user=user)
+#     else:
+#         plans = Plan.objects.none() # Default safety
+
+#     all_departments = []
+#     if user_role == 'corporate':
+#         all_departments = User.objects.filter(department__isnull=False).values_list('department', flat=True).distinct()
+
+#     context = {
+#         'user_role': user_role,
+#         'plans': plans,
+#         'show_my_plans': show_my_plans,
+#         'all_departments': all_departments,
+#         'selected_department': selected_department_name,
+#     }
+#     return render(request, 'plans/dashboard.html', context)
 
 @login_required
 def plan_success(request, plan_id):
@@ -130,46 +221,31 @@ def view_plan(request, plan_id):
     """
     Displays the details of a specific plan with proper access control.
     """
-    # Eagerly load all related data for efficient template rendering
+    # Eagerly load related objects for efficiency
     plan = get_object_or_404(
         Plan.objects.prefetch_related(
-            'goals', 
-            'kpis', 
-            'major_activities__detail_activities' # Ensure activities are fetched
-        ), 
-
+            "goals",
+            "kpis",
+            "major_activities__detail_activities",
+        ),
         id=plan_id
     )
-    
-    user_role = request.user.role.lower()
-    can_view = False
 
-    # Access control logic based on user role and plan ownership
-    if user_role == 'corporate' or (plan.user == request.user) or \
-        (user_role == 'department' and plan.user.department == request.user.department):
-        can_view = True
-    
-    if not can_view:
+    user = request.user
+
+    # Use the centralized can_user_view method
+    if not plan.can_user_view(user):
         raise Http404("You do not have permission to view this plan.")
 
-    # Data is available via relationship managers
-    goals = plan.goals.all()
-    kpis = plan.kpis.all()
-    major_activities = plan.major_activities.all()
-    #goals = StrategicGoal.objects.filter(plan=plan)
-    #kpis = KPI.objects.filter(plan=plan)
-    #major_activities = MajorActivity.objects.filter(plan=plan)
     context = {
-        'plan': plan,
-        #'goals': goals,
-        #'kpis': kpis,
-        #'major_activities': major_activities,
-        'goals': plan.goals.all(),
-        'kpis': plan.kpis.all(),
-        'major_activities': plan.major_activities.all(), 
+        "plan": plan,
+        "goals": plan.goals.all(),
+        "kpis": plan.kpis.all(),
+        "major_activities": plan.major_activities.all(),
     }
-    
-    return render(request, 'plans/view_plan.html', context)
+
+    return render(request, "plans/view_plan.html", context)
+
     
 
 @login_required
@@ -183,6 +259,7 @@ def delete_plan(request, plan_id):
         return redirect('dashboard') 
 
     return redirect('dashboard')
+
 
 
 # def parse_detail_activities(post_data):

@@ -1,17 +1,22 @@
 from django.db import models
 from django.conf import settings
 from django.db.models import Sum
+from plans.permissions import PLAN_APPROVAL_FLOW
 
 # --- Base Models for Planning Structure ---
 
 class Plan(models.Model):
     LEVEL_CHOICES = [
+            
         ("individual", "Individual"),
         ("desk", "Desk"),
         ("department", "Department"),
-        ("md", "MD"),
         ("corporate", "Corporate"),
-        ("strategic-team", "Strategic Team")
+        ("state-minister-destination", "State Minister - Destination"),
+        ("state-minister-promotion", "State Minister - Promotion"),
+        ("strategic-team", "Strategic Team"),
+        ("minister", "Minister"),
+        
     ]
 
     PLAN_TYPE_CHOICES = [
@@ -21,8 +26,16 @@ class Plan(models.Model):
         ("yearly", "Yearly"),
     ]
 
+    WORKFLOW_STATUS = [
+        ("DRAFT", "Draft"),
+        ("SUBMITTED", "Submitted"),
+        ("IN_REVIEW", "In Review"),
+        ("APPROVED", "Approved"),
+        ("REJECTED", "Rejected"),
+    ]
+
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    level = models.CharField(max_length=20, choices=LEVEL_CHOICES)
+    level = models.CharField(max_length=40, choices=LEVEL_CHOICES)
     plan_type = models.CharField(max_length=20, choices=PLAN_TYPE_CHOICES)
     year = models.PositiveIntegerField()
 
@@ -44,14 +57,118 @@ class Plan(models.Model):
         null=True, blank=True
     )
 
-    status = models.CharField(
-        max_length=20,
-        choices=[("PENDING", "Pending"), ("APPROVED", "Approved"), ("REJECTED", "Rejected")],
-        default="PENDING"
+    pillar = models.CharField(
+        max_length=40,
+        choices=[
+            ("corporate", "Corporate"),
+            ("state-minister-destination", "State Minister - Destination"),
+            ("state-minister-promotion", "State Minister - Promotion"),
+        ],
+        null=True, blank=True
+
     )
+
+    status = models.CharField(
+    max_length=20,
+    choices=WORKFLOW_STATUS,
+    default="DRAFT"
+)
+    
+    current_reviewer_role = models.CharField(
+        max_length=40,
+        blank=True,
+        null=True
+    )
+
+    
 
     review_comments = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    # PLAN_APPROVAL_FLOW = {
+    #     "individual": "desk",
+    #     "desk": "department",
+    #     "department": "pillar",
+
+    #     "corporate": "strategic-team",
+    #     "state-minister-destination": "strategic-team",
+    #     "state-minister-promotion": "strategic-team",
+
+    #     "strategic-team": "minister",
+    # }
+
+    def can_user_view(self, user):
+    # 1️⃣ Owner always sees
+        if self.user == user:
+            return True
+
+        # 2️⃣ Current reviewer
+        if user.role == self.current_reviewer_role:
+            return True
+
+        # 3️⃣ Desk → Individual
+        if user.role == "desk" and self.level == "individual":
+            return True
+
+        # 4️⃣ Department → Desk + Individual (same department)
+        if (
+            user.role == "department"
+            and self.user.department
+            and user.department == self.user.department
+            and self.level in ["desk", "individual"]
+        ):
+            return True
+
+        # 5️⃣ Pillar roles → Departments under that pillar
+        if (
+            user.role in [
+                "corporate",
+                "state-minister-destination",
+                "state-minister-promotion",
+            ]
+            and self.user.department
+            and self.user.department.pillar == user.role
+        ):
+            return True
+
+        # 6️⃣ Strategic team → all pillar plans
+        if user.role == "strategic-team" and self.level in [
+            "corporate",
+            "state-minister-destination",
+            "state-minister-promotion",
+        ]:
+            return True
+
+        # 7️⃣ Minister → strategic team plans
+        if user.role == "minister" and self.level == "strategic-team":
+            return True
+
+        return False
+
+
+    def can_user_edit(self, user):
+        return (
+            self.user == user and
+            self.status == "DRAFT"
+        )
+
+    def can_user_approve(self, user):
+        return (
+            self.status in ["SUBMITTED", "IN_REVIEW"] and
+            user.role == self.current_reviewer_role
+        )
+
+    def move_to_next_reviewer(self):
+        next_role = PLAN_APPROVAL_FLOW.get(self.level)
+
+        if next_role == "pillar":
+            next_role = self.pillar
+
+        self.current_reviewer_role = next_role
+        self.status = "IN_REVIEW"
+        self.save()
+
+    
 
     def __str__(self):
         extra = ""
@@ -70,6 +187,19 @@ class Plan(models.Model):
         result = self.major_activities.aggregate(total_budget=Sum("budget"))
         return result["total_budget"] or 0.00
 # --- Plan Detail Models ---
+class Department(models.Model):
+    PILLAR_CHOICES = [
+        ("corporate", "Corporate"),
+        ("state-minister-destination", "State Minister - Destination"),
+        ("state-minister-promotion", "State Minister - Promotion"),
+    ]
+
+    name = models.CharField(max_length=100, unique=True)
+    pillar = models.CharField(max_length=40, choices=PILLAR_CHOICES)
+
+    def __str__(self):
+        return f"{self.name} ({self.pillar})"
+    
 
 class StrategicGoal(models.Model):
     plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name="goals", null=True, blank=True)
@@ -166,3 +296,5 @@ class DetailActivity(models.Model):
         # Ensure we handle short detail activities without slicing error
         description = self.detail_activity
         return f"Detail: {description[:50]}{'...' if len(description) > 50 else ''}"
+    
+    
