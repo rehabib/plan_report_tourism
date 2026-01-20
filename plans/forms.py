@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from decimal import Decimal
 from .models import Plan, StrategicGoal, KPI, MajorActivity, DetailActivity
 from django.contrib.auth import get_user_model
-
+from .models import Plan, Department
 # Get the User Model for ForeignKey fields
 User = get_user_model()
 
@@ -46,6 +46,25 @@ class PlanCreationForm(forms.ModelForm):
         label="Month",
         widget=forms.Select(attrs={'class': 'w-full px-3 py-2 border rounded-md'})
     )
+    # Add department field
+    department = forms.ModelChoiceField(
+        queryset=Department.objects.none(),  # default empty, will filter in __init__
+        required=False,
+        widget=forms.Select(attrs={'class': 'w-full px-3 py-2 border rounded-md'})
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)  # get current user from view
+        super().__init__(*args, **kwargs)
+
+        # Filter department dropdown by the user's pillar
+        if user and user.role.lower() in ['corporate', 'state-minister-destination', 'state-minister-promotion']:
+            self.fields['department'].queryset = Department.objects.filter(
+                pillar__iexact=user.role.lower()
+            )
+        else:
+            # For others, hide the field
+            self.fields['department'].queryset = Department.objects.none()
 
     class Meta:
         model = Plan
@@ -236,3 +255,5 @@ DetailActivityFormset = inlineformset_factory(
     extra=1,
     can_delete=True
 )
+
+

@@ -12,3 +12,8 @@ class CustomUserAdmin(BaseUserAdmin):
     add_fieldsets = BaseUserAdmin.add_fieldsets + (
         (None, {'fields': ('role', 'department',)}),
     )
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj and not request.user.is_superuser:
+            return ("department",)
+        return ()

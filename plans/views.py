@@ -71,9 +71,14 @@ def dashboard(request):
         )
         .order_by("-created_at")
     )
+    show_department_dropdown = user_role in ["corporate", "state-minister-destination", "state-minister-promotion"]
 
     show_my_plans = request.GET.get("show") == "my_plans"
+
     selected_department = request.GET.get("department")
+
+    # if selected_department:
+    #     plans = plans.filter(user__department_id=selected_department)
 
     visibility = Q(user=user)  # 1️⃣ Own plans always visible
 
@@ -89,12 +94,21 @@ def dashboard(request):
         visibility |= Q(level__in=["desk","individual"], user__department=user.department)
 
     # 4️⃣ Pillar heads see all plans in their pillar
+    # if user_role in [
+    #     "corporate",
+    #     "state-minister-destination",
+    #     "state-minister-promotion",
+    # ] and user.department:
+    #     visibility |= Q(pillar=user.department.pillar)
     if user_role in [
-        "corporate",
-        "state-minister-destination",
-        "state-minister-promotion",
-    ]:
-        visibility |= Q(pillar=user.pillar)
+    "corporate",
+    "state-minister-destination",
+    "state-minister-promotion",
+]:
+        visibility |= Q(
+            level="department",
+            user__department__pillar=user_role
+        )
 
     # 5️⃣ Strategic team sees submitted pillar plans
     if user_role == "strategic-team":
@@ -103,7 +117,9 @@ def dashboard(request):
                             current_reviewer_role="strategic-team")
     # 6️⃣ Minister sees plans approved by strategic team
     if user_role == "minister":
-         visibility |= Q(level="strategic-team",
+        visibility |= Q(
+            level="strategic-team",
+            status="APPROVED",
             current_reviewer_role="minister"
         )
 
@@ -116,19 +132,41 @@ def dashboard(request):
         plans = plans.filter(user=user)
 
     # ----------------------------
+# FILTER: Department
+# ----------------------------
+    if selected_department:
+        plans = plans.filter(user__department_id=selected_department)
+        
+
+    # ----------------------------
     # FILTER: Department (Corporate only)
     # ----------------------------
     # Department filter for pillar heads (Corporate + State Ministers)
+    # all_departments = []
+
+    # if (
+    #     user_role in ["corporate", "state-minister-destination", "state-minister-promotion"]
+    #     and user.department
+    # ):
+    #     all_departments = (
+    #         Department.objects
+    #         .filter(pillar=user.department.pillar)
+    #         .values_list("name", flat=True)
+    #         .distinct()
+    #     )
+
+    #     if selected_department:
+    #         plans = plans.filter(user__department__name__iexact=selected_department)
+
     all_departments = []
+
     if user_role in ["corporate", "state-minister-destination", "state-minister-promotion"]:
         all_departments = (
             Department.objects
-            .filter.filter(pillar__iexact=user_role)
-        .values_list("name", flat=True)
-    )
+            .filter(pillar=user_role)
+            .order_by("name")
+        )
 
-        if selected_department:
-            plans = plans.filter(user__department__name__iexact=selected_department)
 
 
     return render(request, "plans/dashboard.html", {
@@ -137,6 +175,7 @@ def dashboard(request):
         "show_my_plans": show_my_plans,
         "all_departments": all_departments,
         "selected_department": selected_department,
+        "show_department_dropdown": show_department_dropdown,
     })
 
 
@@ -310,7 +349,8 @@ def create_plan(request):
     formset_kwargs = {'plan_type': plan_type} if plan_type else {}
 
     if request.method == 'POST':
-        form = PlanCreationForm(request.POST)
+        form = PlanCreationForm(request.POST, user=request.user)
+        
         goal_formset = StrategicGoalFormset(request.POST, prefix='goal')
         kpi_formset = KPIFormset(request.POST, prefix='kpis', form_kwargs=formset_kwargs)
         major_formset = MajorActivityFormset(request.POST, prefix='major_activities')
@@ -380,7 +420,7 @@ def create_plan(request):
                 form.add_error(None, 'An error occurred while saving the plan.')
 
     else:
-        form = PlanCreationForm()
+        form = PlanCreationForm(user=request.user)
         goal_formset = StrategicGoalFormset(prefix='goal')
         kpi_formset = KPIFormset(prefix='kpis', form_kwargs=formset_kwargs)
         major_formset = MajorActivityFormset(prefix='major_activities')

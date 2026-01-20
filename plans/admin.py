@@ -1,8 +1,16 @@
 from django.contrib import admin
 from django.db.models import Sum
 from .models import Plan, StrategicGoal, KPI, MajorActivity, DetailActivity
+from .models import Department
 
 
+
+@admin.register(Department)
+class DepartmentAdmin(admin.ModelAdmin):
+    list_display = ("name", "pillar")
+    list_filter = ("pillar",)
+    search_fields = ("name",)
+    ordering = ("pillar", "name")
 
 # --- 1. Detail Activity Inline (Lowest Level) ---
 
@@ -102,6 +110,27 @@ class PlanAdmin(admin.ModelAdmin):
     
     # Inlines are listed here. MajorActivityInline now brings its DetailActivity children.
     inlines = [StrategicGoalInline, KPIInline, MajorActivityInline]  
+
+    def has_add_permission(self, request):
+        return request.user.is_superuser
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser
+    
+    readonly_fields = (
+    "status",
+    "current_reviewer_role",
+    "pillar",
+    "created_at",
+)
+    def get_readonly_fields(self, request, obj=None):
+        if not request.user.is_superuser:
+            return [f.name for f in self.model._meta.fields]
+        return self.readonly_fields
+
     
     date_hierarchy = "created_at"
     
@@ -111,7 +140,7 @@ class PlanAdmin(admin.ModelAdmin):
     get_total_budget.short_description = 'Total Budget'
     get_total_budget.admin_order_field = 'major_activities__budget'
 # Register remaining models to be visible in the Admin interface (optional but good practice)
-admin.site.register(StrategicGoal)
-admin.site.register(KPI)
-admin.site.register(MajorActivity)
-admin.site.register(DetailActivity)
+# admin.site.register(StrategicGoal)
+# admin.site.register(KPI)
+# admin.site.register(MajorActivity)
+# admin.site.register(DetailActivity)
