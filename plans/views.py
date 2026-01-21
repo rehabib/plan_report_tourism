@@ -1,4 +1,6 @@
 import re
+from django.contrib import messages
+from django.shortcuts import redirect
 from django.template.loader import render_to_string
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout
@@ -10,6 +12,7 @@ from django.http import Http404
 from django.forms import inlineformset_factory
 from django.db import transaction # Important for atomic nested saves
 from .models import Department, Plan, StrategicGoal, KPI, MajorActivity, DetailActivity
+from plans.permissions import PLAN_APPROVAL_FLOW
 from .forms import (
     PlanCreationForm, 
     StrategicGoalFormset, 
@@ -83,15 +86,21 @@ def dashboard(request):
     visibility = Q(user=user)  # 1️⃣ Own plans always visible
 
     # 2️⃣ Plans waiting for user's approval
-    visibility |= Q(current_reviewer_role=user_role)
+    visibility |= Q(current_reviewer_role=user_role,
+                    status__in=["SUBMITTED","IN_REVIEW"]
+                    )
 
     # Desk → Individual in same department
     if user_role == "desk" and user.department:
-        visibility |= Q(level="individual", user__department=user.department)
+        visibility |= Q(level="individual", user__department=user.department,
+                        status__in=["SUBMITTED","IN_REVIEW"]
+                        )
 
     # Department → Desk + Individual in same department
     if user_role == "department" and user.department:
-        visibility |= Q(level__in=["desk","individual"], user__department=user.department)
+        visibility |= Q(level__in=["desk","individual"], user__department=user.department,
+                        status__in=["SUBMITTED","IN_REVIEW"]
+                        )
 
     # 4️⃣ Pillar heads see all plans in their pillar
     # if user_role in [
@@ -107,7 +116,8 @@ def dashboard(request):
 ]:
         visibility |= Q(
             level="department",
-            user__department__pillar=user_role
+            user__department__pillar=user_role,
+            status__in=["SUBMITTED","IN_REVIEW"]
         )
 
     # 5️⃣ Strategic team sees submitted pillar plans
@@ -124,7 +134,8 @@ def dashboard(request):
         )
 
     plans = base_queryset.filter(visibility).distinct()
-
+    for plan in plans:
+        plan.can_edit = plan.can_user_edit(request.user)
     # ----------------------------
     # FILTER: My Plans Only
     # ----------------------------
@@ -287,17 +298,29 @@ def view_plan(request, plan_id):
 
     
 
+# @login_required
+# def delete_plan(request, plan_id):
+#     plan_to_delete = get_object_or_404(Plan, pk=plan_id)
+#     if plan_to_delete.user != request.user:
+#         raise Http404("You do not have permission to delete this plan.")
+
+#     if request.method == 'POST':
+#         plan_to_delete.delete()
+#         return redirect('dashboard') 
+
+#     return redirect('dashboard')
 @login_required
 def delete_plan(request, plan_id):
-    plan_to_delete = get_object_or_404(Plan, pk=plan_id)
-    if plan_to_delete.user != request.user:
-        raise Http404("You do not have permission to delete this plan.")
+    if request.method != "POST":
+        raise Http404()
 
-    if request.method == 'POST':
-        plan_to_delete.delete()
-        return redirect('dashboard') 
+    plan = get_object_or_404(Plan, pk=plan_id)
 
-    return redirect('dashboard')
+    if not plan.can_user_edit(request.user):
+        raise Http404("Delete not allowed")
+
+    plan.delete()
+    return redirect("dashboard")
 
 
 
@@ -449,10 +472,17 @@ def create_plan(request):
 
 @login_required
 def edit_plan(request, plan_id):
+    # plan = get_object_or_404(Plan, id=plan_id)
+    # if plan.user != request.user:
+    #     raise Http404
     plan = get_object_or_404(Plan, id=plan_id)
-    if plan.user != request.user:
-        raise Http404
-
+    # if not plan.can_user_edit(request.user):
+    #     raise Http404("Edit not allowed")
+    # Redirect if user cannot edit
+    if not plan.can_user_edit(request.user):
+        messages.error(request, "You cannot edit this plan.",extra_tags="plan")
+        return redirect("dashboard")
+    
     plan_type = request.POST.get('plan_type') or plan.plan_type
     formset_kwargs = {'plan_type': plan_type} if plan_type else {}
 
@@ -621,14 +651,40 @@ def edit_plan(request, plan_id):
 def submit_plan(request, plan_id):
     plan = get_object_or_404(Plan, id=plan_id)
 
-    # Only owner can submit
     if plan.user != request.user:
         raise Http404("You do not have permission to submit this plan.")
 
-    # Only draft plans can be submitted
-    if plan.status == "PENDING":
+    if plan.status == "DRAFT":
         plan.status = "SUBMITTED"
+
+        # Assign first reviewer
+        next_role = PLAN_APPROVAL_FLOW.get(plan.level)
+
+        if next_role == "pillar":
+            next_role = plan.pillar  # resolved dynamically
+
+        plan.current_reviewer_role = next_role
         plan.save()
 
     return redirect("dashboard")
 
+@login_required
+def approve_plan(request, plan_id):
+    plan = get_object_or_404(Plan, id=plan_id)
+    try:
+        plan.approve(request.user)
+        messages.success(request, "Plan approved successfully.")
+    except PermissionError:
+        messages.error(request, "You cannot approve this plan.")
+    return redirect('dashboard')
+
+@login_required
+def reject_plan(request, plan_id):
+    plan = get_object_or_404(Plan, id=plan_id)
+    comment = request.POST.get('comment') if request.method == 'POST' else None
+    try:
+        plan.reject(request.user, comment)
+        messages.success(request, "Plan rejected successfully.")
+    except PermissionError:
+        messages.error(request, "You cannot reject this plan.")
+    return redirect('dashboard')

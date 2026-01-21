@@ -167,6 +167,34 @@ class Plan(models.Model):
         self.current_reviewer_role = next_role
         self.status = "IN_REVIEW"
         self.save()
+    
+    def approve(self, user):
+        if not self.can_user_approve(user):
+            raise PermissionError("You cannot approve this plan.")
+
+        next_role = PLAN_APPROVAL_FLOW.get(self.level)
+        if next_role == "pillar":
+            next_role = self.pillar
+
+        if next_role:  # There’s another reviewer
+            self.current_reviewer_role = next_role
+            self.status = "IN_REVIEW"
+        else:  # No next reviewer → final approval
+            self.status = "APPROVED"
+            self.current_reviewer_role = None
+        self.save()
+
+
+def reject(self, user, comment=None):
+    """Reject the plan if the user is the current reviewer."""
+    if not self.can_user_approve(user):
+        raise PermissionError("You cannot reject this plan.")
+
+    self.status = "REJECTED"
+    if comment:
+        self.review_comments = comment
+    self.current_reviewer_role = None
+    self.save()
 
     
 

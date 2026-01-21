@@ -11,5 +11,7 @@ urlpatterns = [
     path('plans/<int:plan_id>/', views.view_plan, name='view_plan'),
     path('delete/<int:plan_id>/', views.delete_plan, name='delete_plan'),
     path('submit/<int:plan_id>/', views.submit_plan, name='submit_plan'),
+    path('approve/<int:plan_id>/', views.approve_plan, name='approve_plan'),
+    path('reject/<int:plan_id>/', views.reject_plan, name='reject_plan'),
 
 ]

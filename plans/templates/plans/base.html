@@ -78,6 +78,21 @@
 
 <!-- MAIN CONTENT -->
 <main class="container mx-auto px-6 py-8">
+    <body class="bg-blue-100 min-h-screen font-sans antialiased">
+    {% if messages %}
+    <div class="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+      <div class="space-y-2">
+        {% for message in messages %}
+          <div class="px-6 py-4 rounded shadow pointer-events-auto
+                      {% if message.tags == 'error' %}bg-red-100 text-red-800
+                      {% elif message.tags == 'success' %}bg-green-100 text-green-800
+                      {% else %}bg-gray-100 text-gray-800{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
     {% block content %}
     {% endblock %}
 </main>
@@ -87,6 +102,15 @@
 document.getElementById("menu-btn").onclick = function () {
     document.getElementById("mobile-menu").classList.toggle("hidden");
 };
+
+document.addEventListener('DOMContentLoaded', function () {
+const messages = document.querySelectorAll('.fixed div');
+messages.forEach(msg => {
+    setTimeout(() => {
+        msg.classList.add('transition-opacity', 'duration-1000', 'opacity-0');
+    }, 3000); // fade after 3 seconds
+});
+});
 </script>
 
 <footer class="mt-6 py-8 px-6 text-left text-white bg-cover bg-center bg-[url('{% static "plans/images/ministryoftourism.jpg" %}')]">

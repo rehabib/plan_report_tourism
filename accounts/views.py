@@ -23,10 +23,10 @@ def register_view(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-            messages.success(request, "Registration successful. You are now logged in.")
+            messages.success(request, "Registration successful. You are now logged in.", extra_tags="auth")
             return redirect('dashboard')  # Redirect to a home page or dashboard
         else:
-            messages.error(request, "Unsuccessful registration. Invalid information.")
+            messages.error(request, "Unsuccessful registration. Invalid information.", extra_tags="auth")
     else:
         form = UserRegistrationForm()
     return render(request, 'accounts/auth.html', {'form': form, 'view_name': 'register'})
@@ -48,10 +48,10 @@ def login_view(request):
             user = authenticate(username=username, password=password)
             if user is not None:
                 login(request, user)
-                messages.info(request, f"You are now logged in as {username}.")
+                messages.info(request, f"You are now logged in as {username}.", extra_tags="auth")
                 return redirect('dashboard') # Redirect to a home page or dashboard
             else:
-                messages.error(request, "Invalid username or password.")
+                messages.error(request, "Invalid username or password.", extra_tags="auth")
         else:
             messages.error(request, "Invalid username or password.")
     else:
@@ -63,7 +63,7 @@ def logout_view(request):
     """Logs out the current user."""
     if request.method == 'POST':
         logout(request)
-        messages.info(request, "You have been logged out.")
+        messages.info(request, "You have been logged out.", extra_tags="auth")
     return redirect('login')
 
 @login_required
