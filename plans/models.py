@@ -29,6 +29,7 @@ class Plan(models.Model):
     WORKFLOW_STATUS = [
         ("DRAFT", "Draft"),
         ("SUBMITTED", "Submitted"),
+        ("RESUBMITTED", "Resubmitted"),#for rejected plans
         ("IN_REVIEW", "In Review"),
         ("APPROVED", "Approved"),
         ("REJECTED", "Rejected"),
@@ -98,19 +99,19 @@ class Plan(models.Model):
     # }
 
     def can_user_view(self, user):
-    # 1️⃣ Owner always sees
+    #Owner always sees
         if self.user == user:
             return True
 
-        # 2️⃣ Current reviewer
+        #Current reviewer
         if user.role == self.current_reviewer_role:
             return True
 
-        # 3️⃣ Desk → Individual
+        # Desk → Individual
         if user.role == "desk" and self.level == "individual":
             return True
 
-        # 4️⃣ Department → Desk + Individual (same department)
+        #Department → Desk + Individual (same department)
         if (
             user.role == "department"
             and self.user.department
@@ -119,7 +120,7 @@ class Plan(models.Model):
         ):
             return True
 
-        # 5️⃣ Pillar roles → Departments under that pillar
+        # Pillar roles → Departments under that pillar
         if (
             user.role in [
                 "corporate",
@@ -131,7 +132,7 @@ class Plan(models.Model):
         ):
             return True
 
-        # 6️⃣ Strategic team → all pillar plans
+        #Strategic team → all pillar plans
         if user.role == "strategic-team" and self.level in [
             "corporate",
             "state-minister-destination",
@@ -139,7 +140,7 @@ class Plan(models.Model):
         ]:
             return True
 
-        # 7️⃣ Minister → strategic team plans
+        #Minister → strategic team plans
         if user.role == "minister" and self.level == "strategic-team":
             return True
 
@@ -149,12 +150,12 @@ class Plan(models.Model):
     def can_user_edit(self, user):
         return (
             self.user == user and
-            self.status == "DRAFT"
+            self.status in ["DRAFT", "REJECTED"]
         )
 
     def can_user_approve(self, user):
         return (
-            self.status in ["SUBMITTED", "IN_REVIEW"] and
+            self.status in ["SUBMITTED", "RESUBMITTED", "IN_REVIEW"] and
             user.role == self.current_reviewer_role
         )
 
@@ -168,33 +169,65 @@ class Plan(models.Model):
         self.status = "IN_REVIEW"
         self.save()
     
+    # def approve(self, user):
+    #     if not self.can_user_approve(user):
+    #         raise PermissionError("You cannot approve this plan.")
+
+    #     next_role = PLAN_APPROVAL_FLOW.get(self.level)
+    #     if next_role == "pillar":
+    #         next_role = self.pillar
+
+    #     if next_role:  # There’s another reviewer
+    #         self.current_reviewer_role = next_role
+    #         self.status = "IN_REVIEW"
+    #     else:  # No next reviewer → final approval
+    #         self.status = "APPROVED"
+    #         self.current_reviewer_role = None
+    #     self.save()
+
+    def is_final_approver(self, user):
+    
+        FINAL_APPROVERS = {
+            "individual": "department",
+            "desk": "department",
+            "department": "pillar",  # resolved dynamically
+            "corporate": "strategic-team",
+            "state-minister-destination": "strategic-team",
+            "state-minister-promotion": "strategic-team",
+            "strategic-team": "minister",
+        }
+
+        final_role = FINAL_APPROVERS.get(self.level)
+
+        if final_role == "pillar":
+            final_role = self.pillar
+
+        return user.role == final_role
+
     def approve(self, user):
         if not self.can_user_approve(user):
             raise PermissionError("You cannot approve this plan.")
 
-        next_role = PLAN_APPROVAL_FLOW.get(self.level)
-        if next_role == "pillar":
-            next_role = self.pillar
-
-        if next_role:  # There’s another reviewer
-            self.current_reviewer_role = next_role
-            self.status = "IN_REVIEW"
-        else:  # No next reviewer → final approval
+        # FINAL approval
+        if self.is_final_approver(user):
             self.status = "APPROVED"
             self.current_reviewer_role = None
+            self.save()
+            return
+
+        # Otherwise → move to next reviewer
+        self.move_to_next_reviewer()
+
+    def reject(self, user, comment=None):
+        """Reject the plan if the user is the current reviewer."""
+        if not self.can_user_approve(user):
+            raise PermissionError("You cannot reject this plan.")
+
+        self.status = "REJECTED"
+        if comment:
+            self.review_comments = comment
+        self.current_reviewer_role = None
         self.save()
-
-
-def reject(self, user, comment=None):
-    """Reject the plan if the user is the current reviewer."""
-    if not self.can_user_approve(user):
-        raise PermissionError("You cannot reject this plan.")
-
-    self.status = "REJECTED"
-    if comment:
-        self.review_comments = comment
-    self.current_reviewer_role = None
-    self.save()
 
     
 

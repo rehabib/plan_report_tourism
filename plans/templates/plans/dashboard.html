@@ -132,41 +132,59 @@
                                 $0.00
                             {% endif %}
                         </td>
-
+                    <div class="flex items-center gap-3">
                         <td class="px-6 py-4 text-right space-x-2">
                             <a href="{% url 'view_plan' plan.pk %}"
-                                class="font-medium text-blue-600 hover:underline">View</a>
+                            class="font-medium text-blue-600 hover:underline">View</a>
 
-                            <!-- Edit & Delete: only if plan.can_user_edit -->
-                                {% if plan.can_edit %}
-                                    <a href="{% url 'edit_plan' plan.pk %}" class="font-medium text-green-600 hover:underline">Edit</a>
-                                    <button type="button" class="font-medium text-red-600 hover:underline delete-button"
-                                        data-delete-url="{% url 'delete_plan' plan.pk %}">Delete</button>
-                                {% endif %}
+                            {% if plan.can_edit %}
+                        
+                                <a href="{% url 'edit_plan' plan.pk %}"
+                                class="font-medium text-green-600 hover:underline">Edit</a>
 
+                                <button type="button"
+                                        class="font-medium text-red-600 hover:underline delete-button"
+                                        data-delete-url="{% url 'delete_plan' plan.pk %}">
+                                    Delete
+                                </button>
+                            {% endif %}
 
-                                <!-- Submit button: only if current user is owner and status is DRAFT -->
-                                {% if plan.user == request.user and plan.status == 'DRAFT' %}
-                                    <a href="{% url 'submit_plan' plan.pk %}" class="font-medium text-indigo-600 hover:underline">Submit</a>
-                                {% endif %}
+                            {% if plan.status == "REJECTED" and plan.user == request.user %}
+                                <form method="post" action="{% url 'submit_plan' plan.pk %}" class="inline">
+                                    {% csrf_token %}
+                                    <button class="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600">
+                                        Resubmit
+                                    </button>
+                                </form>
+                            {% endif %}
 
-                                <!-- Create Report: only if APPROVED -->
-                                {% if plan.status == 'APPROVED' %}
-                                    <a href="{% url 'create_report' plan.id %}" class="font-medium text-purple-600 hover:underline">Create Report</a>
-                                {% endif %}
+                            {% if plan.user == request.user and plan.status == "DRAFT" %}
+                                <a href="{% url 'submit_plan' plan.pk %}"
+                                class="font-medium text-indigo-600 hover:underline">
+                                    Submit
+                                </a>
+                            {% endif %}
 
-                                {% if plan.can_user_approve user %}
-                                    <form method="post" action="{% url 'approve_plan' plan.pk %}" class="inline">
-                                        {% csrf_token %}
-                                        <button class="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600">Approve</button>
-                                    </form>
-                                    <form method="post" action="{% url 'reject_plan' plan.pk %}" class="inline">
-                                        {% csrf_token %}
-                                        <button class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">Reject</button>
-                                    </form>
-                                {% endif %}
+                            {% if plan.can_approve %}
+                            <div class="flex items-center gap-1">
+                                <form method="post" action="{% url 'approve_plan' plan.pk %}" class="inline">
+                                    {% csrf_token %}
+                                    <button class="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600">
+                                        Approve
+                                    </button>
+                                </form>
 
-                            </td>    
+                                <form method="post" action="{% url 'reject_plan' plan.pk %}" class="inline">
+                                    {% csrf_token %}
+                                    <button class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">
+                                        Reject
+                                    </button>
+                                </form>
+                            
+                            {% endif %}
+
+                            </td>
+                        </div>    
                             <!-- {% if user.is_authenticated and plan.user == request.user and plan.status != 'APPROVED' %}
                             <a href="{% url 'edit_plan' plan.pk %}"
                                 class="font-medium text-green-600 hover:underline">Edit</a>

@@ -87,19 +87,19 @@ def dashboard(request):
 
     # 2️⃣ Plans waiting for user's approval
     visibility |= Q(current_reviewer_role=user_role,
-                    status__in=["SUBMITTED","IN_REVIEW"]
+                    status__in=["SUBMITTED","IN_REVIEW","RESUBMITTED"]
                     )
 
     # Desk → Individual in same department
     if user_role == "desk" and user.department:
         visibility |= Q(level="individual", user__department=user.department,
-                        status__in=["SUBMITTED","IN_REVIEW"]
+                        status__in=["SUBMITTED","IN_REVIEW","RESUBMITTED"]
                         )
 
     # Department → Desk + Individual in same department
     if user_role == "department" and user.department:
         visibility |= Q(level__in=["desk","individual"], user__department=user.department,
-                        status__in=["SUBMITTED","IN_REVIEW"]
+                        status__in=["SUBMITTED","IN_REVIEW","RESUBMITTED"]
                         )
 
     # 4️⃣ Pillar heads see all plans in their pillar
@@ -117,13 +117,13 @@ def dashboard(request):
         visibility |= Q(
             level="department",
             user__department__pillar=user_role,
-            status__in=["SUBMITTED","IN_REVIEW"]
+            status__in=["SUBMITTED","IN_REVIEW","RESUBMITTED"]
         )
 
     # 5️⃣ Strategic team sees submitted pillar plans
     if user_role == "strategic-team":
             visibility |= Q(level__in=["corporate","state-minister-destination","state-minister-promotion"],
-                            status="SUBMITTED",
+                            status__in=["SUBMITTED","RESUBMITTED"],
                             current_reviewer_role="strategic-team")
     # 6️⃣ Minister sees plans approved by strategic team
     if user_role == "minister":
@@ -134,8 +134,11 @@ def dashboard(request):
         )
 
     plans = base_queryset.filter(visibility).distinct()
+
     for plan in plans:
         plan.can_edit = plan.can_user_edit(request.user)
+        plan.can_approve = plan.can_user_approve(request.user)
+
     # ----------------------------
     # FILTER: My Plans Only
     # ----------------------------
@@ -647,6 +650,53 @@ def edit_plan(request, plan_id):
         'plan_instance': plan,
     })
 
+# @login_required
+# def submit_plan(request, plan_id):
+#     plan = get_object_or_404(Plan, id=plan_id)
+
+#     if plan.user != request.user:
+#         raise Http404()
+
+#     if plan.status in ["DRAFT", "REJECTED"]:
+#         plan.status = "SUBMITTED"
+#     elif plan.status == "REJECTED":
+#         plan.status = "RESUBMITTED"
+#         plan.review_comments = None  # clear old comment
+#         next_role = PLAN_APPROVAL_FLOW.get(plan.level)
+#         if next_role == "pillar":
+#             next_role = plan.pillar
+
+#         plan.current_reviewer_role = next_role
+        
+#         plan.save()
+
+#     return redirect("dashboard")
+
+# @login_required
+# def submit_plan(request, plan_id):
+#     plan = get_object_or_404(Plan, id=plan_id)
+
+#     if plan.user != request.user:
+#         raise Http404("You do not have permission to submit this plan.")
+
+#     if plan.status == "DRAFT":
+#         # Minister auto-approval
+#         if request.user.role == "minister":
+#             plan.status = "APPROVED"
+#             plan.current_reviewer_role = None
+#         else:
+#             plan.status = "SUBMITTED"
+
+#             next_role = PLAN_APPROVAL_FLOW.get(plan.level)
+#             if next_role == "pillar":
+#                 next_role = plan.pillar
+
+#             plan.current_reviewer_role = next_role
+
+#         plan.save()
+
+#     return redirect("dashboard")
+
 @login_required
 def submit_plan(request, plan_id):
     plan = get_object_or_404(Plan, id=plan_id)
@@ -654,19 +704,32 @@ def submit_plan(request, plan_id):
     if plan.user != request.user:
         raise Http404("You do not have permission to submit this plan.")
 
-    if plan.status == "DRAFT":
+    # Minister-created plans are auto-approved
+    if request.user.role == "minister":
+        plan.status = "APPROVED"
+        plan.current_reviewer_role = None
+        plan.save()
+        return redirect("dashboard")
+
+    # Resubmission after rejection
+    if plan.status == "REJECTED":
+        plan.status = "RESUBMITTED"
+        plan.review_comments = None
+    else:
         plan.status = "SUBMITTED"
 
-        # Assign first reviewer
-        next_role = PLAN_APPROVAL_FLOW.get(plan.level)
+    next_role = PLAN_APPROVAL_FLOW.get(plan.level)
 
-        if next_role == "pillar":
-            next_role = plan.pillar  # resolved dynamically
+    if next_role == "pillar":
+        if not plan.pillar:
+            raise ValueError("Department plan must have a pillar")
+        next_role = plan.pillar
 
-        plan.current_reviewer_role = next_role
-        plan.save()
+    plan.current_reviewer_role = next_role
+    plan.save()
 
     return redirect("dashboard")
+
 
 @login_required
 def approve_plan(request, plan_id):

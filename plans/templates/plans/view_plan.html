@@ -62,16 +62,25 @@
                     class="bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-full hover:bg-gray-400 transition-colors shadow-md text-sm">
                     Back to Dashboard
                 </a>
+                
             </div>
         </div>
 
-        <!-- Review Comments Block -->
-        {% if plan.review_comments %}
-        <blockquote
-            class="text-sm italic text-gray-700 mt-4 p-3 border-l-4 border-yellow-500 bg-yellow-50 rounded-r-lg">
-            <span class="font-bold text-yellow-800">Review Comments:</span> "{{ plan.review_comments }}"
-        </blockquote>
-        {% endif %}
+            {% if plan.review_comments %}
+                {% if plan.status == "REJECTED" %}
+                    <div class="mt-4 p-3 bg-red-100 text-red-800 rounded">
+                        <strong>Rejected Reason:</strong><br>
+                        {{ plan.review_comments }}
+                    </div>
+                {% else %}
+                    <blockquote
+                        class="text-sm italic text-gray-700 mt-4 p-3 border-l-4 border-yellow-500 bg-yellow-50 rounded-r-lg">
+                        <span class="font-bold text-yellow-800">Review Comments:</span>
+                        "{{ plan.review_comments }}"
+                    </blockquote>
+                {% endif %}
+            {% endif %}
+
     </div>
 
     <!-- 
@@ -252,4 +261,7 @@
     </div>
 
 </div>
+
+
+
 {% endblock %}
