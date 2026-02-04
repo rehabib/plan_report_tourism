@@ -133,24 +133,30 @@ def dashboard(request):
             current_reviewer_role="minister"
         )
 
+    if selected_department:
+       visibility &= Q(user__department_id=selected_department)
     plans = base_queryset.filter(visibility).distinct()
+    # plans = base_queryset.filter(visibility).distinct()
 
     for plan in plans:
         plan.can_edit = plan.can_user_edit(request.user)
         plan.can_approve = plan.can_user_approve(request.user)
 
     # ----------------------------
-    # FILTER: My Plans Only
+    # FILTER: My Plans Only feb4
     # ----------------------------
+    # if show_my_plans:
+    #     plans = plans.filter(user=user)
     if show_my_plans:
-        plans = plans.filter(user=user)
-
+       visibility &= Q(user=user)
     # ----------------------------
-# FILTER: Department
+# FILTER: Department feb4
 # ----------------------------
-    if selected_department:
-        plans = plans.filter(user__department_id=selected_department)
+    # if selected_department:
+    #     plans = plans.filter(user__department_id=selected_department)
         
+       
+       
 
     # ----------------------------
     # FILTER: Department (Corporate only)
@@ -385,6 +391,9 @@ def create_plan(request):
             try:
                 with transaction.atomic():
                     plan = form.save(commit=False)
+                    # 🔥 CRITICAL FIX
+                    if request.user.department:
+                        plan.pillar = request.user.department.pillar
                     plan.user = request.user
                     plan.level = request.user.role.lower()
                     plan.save()
