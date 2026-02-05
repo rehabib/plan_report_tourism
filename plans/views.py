@@ -10,7 +10,10 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.db.models import Q
 from django.http import Http404
 from django.forms import inlineformset_factory
-from django.db import transaction # Important for atomic nested saves
+from django.db import transaction
+from reports.models import Report
+
+from reports.models import Report # Important for atomic nested saves
 from .models import Department, Plan, StrategicGoal, KPI, MajorActivity, DetailActivity
 from plans.permissions import PLAN_APPROVAL_FLOW
 from .forms import (
@@ -109,6 +112,7 @@ def dashboard(request):
     #     "state-minister-promotion",
     # ] and user.department:
     #     visibility |= Q(pillar=user.department.pillar)
+    
     if user_role in [
     "corporate",
     "state-minister-destination",
@@ -135,20 +139,29 @@ def dashboard(request):
 
     if selected_department:
        visibility &= Q(user__department_id=selected_department)
+
     plans = base_queryset.filter(visibility).distinct()
     # plans = base_queryset.filter(visibility).distinct()
+
+    reports = Report.objects.filter(
+    plan__in=plans
+)
+    for report in reports:
+        report.can_approve = report.can_user_approve(request.user)
+        report.can_view = report.plan.can_user_view(request.user)
 
     for plan in plans:
         plan.can_edit = plan.can_user_edit(request.user)
         plan.can_approve = plan.can_user_approve(request.user)
-
+        plan.user_report = Report.objects.filter(plan=plan, user=request.user).first()
     # ----------------------------
     # FILTER: My Plans Only feb4
     # ----------------------------
-    # if show_my_plans:
-    #     plans = plans.filter(user=user)
     if show_my_plans:
-       visibility &= Q(user=user)
+       plans = plans.filter(user=user)
+       
+    # if show_my_plans:
+    #    visibility &= Q(user=user)
     # ----------------------------
 # FILTER: Department feb4
 # ----------------------------

@@ -89,6 +89,7 @@
                         <th scope="col" class="px-6 py-3 text-right">Total Budget</th> 
 
                         <th scope="col" class="px-6 py-3 text-right">Actions</th>
+                        <th scope="col" class="px-6 py-3">Report</th>
 
                     </tr>
                 </thead>
@@ -132,15 +133,22 @@
                                 $0.00
                             {% endif %}
                         </td>
-                    <div class="flex items-center gap-3">
-                        <td class="px-6 py-4 text-right space-x-2">
-                            <a href="{% url 'view_plan' plan.pk %}"
-                            class="font-medium text-blue-600 hover:underline">View</a>
 
+                        <td class="px-6 py-4 text-right">
+                        <div class="flex items-start justify-end gap-3">
+
+                            <!-- VIEW (always first) -->
+                            <a href="{% url 'view_plan' plan.pk %}"
+                            class="font-medium text-blue-600 hover:underline">
+                                View
+                            </a>
+                           
+                            <!-- EDIT / DELETE -->
                             {% if plan.can_edit %}
-                        
                                 <a href="{% url 'edit_plan' plan.pk %}"
-                                class="font-medium text-green-600 hover:underline">Edit</a>
+                                class="font-medium text-green-600 hover:underline">
+                                    Edit
+                                </a>
 
                                 <button type="button"
                                         class="font-medium text-red-600 hover:underline delete-button"
@@ -149,15 +157,7 @@
                                 </button>
                             {% endif %}
 
-                            {% if plan.status == "REJECTED" and plan.user == request.user %}
-                                <form method="post" action="{% url 'submit_plan' plan.pk %}" class="inline">
-                                    {% csrf_token %}
-                                    <button class="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600">
-                                        Resubmit
-                                    </button>
-                                </form>
-                            {% endif %}
-
+                            <!-- SUBMIT -->
                             {% if plan.user == request.user and plan.status == "DRAFT" %}
                                 <a href="{% url 'submit_plan' plan.pk %}"
                                 class="font-medium text-indigo-600 hover:underline">
@@ -165,26 +165,48 @@
                                 </a>
                             {% endif %}
 
+                            <!-- RESUBMIT -->
+                            {% if plan.status == "REJECTED" and plan.user == request.user %}
+                                <form method="post" action="{% url 'submit_plan' plan.pk %}">
+                                    {% csrf_token %}
+                                    <button class="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600">
+                                        Resubmit
+                                    </button>
+                                </form>
+                            {% endif %}
+
+                            <!-- APPROVE / REJECT -->
                             {% if plan.can_approve %}
-                            <div class="flex items-center gap-1">
-                                <form method="post" action="{% url 'approve_plan' plan.pk %}" class="inline">
+                                <!-- Approve -->
+                                <form method="post" action="{% url 'approve_plan' plan.pk %}">
                                     {% csrf_token %}
                                     <button class="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600">
                                         Approve
                                     </button>
                                 </form>
 
-                                <form method="post" action="{% url 'reject_plan' plan.pk %}" class="inline">
+                                <!-- Reject (button + textarea stacked) -->
+                                <form method="post"
+                                    action="{% url 'reject_plan' plan.pk %}"
+                                    class="flex flex-col items-center gap-1">
                                     {% csrf_token %}
+
+                                    <textarea
+                                        name="comment"
+                                        required
+                                        rows="2"
+                                        class="w-48 text-xs border rounded p-1"
+                                        placeholder="Reason for rejection"></textarea>
+
                                     <button class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">
                                         Reject
                                     </button>
                                 </form>
-                            
                             {% endif %}
 
-                            </td>
-                        </div>    
+                        </div>
+                    </td>
+
                             <!-- {% if user.is_authenticated and plan.user == request.user and plan.status != 'APPROVED' %}
                             <a href="{% url 'edit_plan' plan.pk %}"
                                 class="font-medium text-green-600 hover:underline">Edit</a>
@@ -201,6 +223,26 @@
                             {% endif %}    
                             
                         </td> -->
+                        <td class="px-6 py-4">
+                            <strong>{{ plan.name }}</strong> ({{ plan.get_plan_type_display }})
+
+                            {% if plan.status == 'APPROVED' %}
+                                {% if not plan.user_report %}
+                                    <a href="{% url 'create_report' plan.id %}" 
+                                    class="font-medium text-purple-600 hover:underline">
+                                    Create Report
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'view_report' plan.user_report.id %}" 
+                                    class="font-medium text-green-600 hover:underline">
+                                    View Your Report
+                                    </a>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <!-- {% if plan.status == 'APPROVED' %}
+                                <a href="{% url 'create_report' plan.id %}" class="font-medium text-purple-600 hover:underline">Create Report</a>
+                            {% endif %}  -->
                     </tr>
                     {% endfor %}
                 </tbody>

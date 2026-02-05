@@ -1,26 +1,59 @@
-<h3>KPI Performance Report</h3>
+<div class="max-w-6xl mx-auto my-10 bg-white p-6 rounded-lg shadow-lg">
 
-<form method="post">
-  {% csrf_token %}
-  {{ kpi_formset.management_form }}
+    <h2 class="text-2xl font-bold text-gray-700 mb-4">Report for Plan: {{ plan.name }}</h2>
+    <p class="text-gray-600 mb-6">Reporting Period: <span class="font-semibold">{{ plan.get_plan_type_display }}</span></p>
 
-  <table>
-    <tr>
-      <th>KPI</th>
-      <th>Target</th>
-      <th>Actual</th>
-      <th>Remark</th>
-    </tr>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        {{ kpi_formset.management_form }}
+        {{ activity_formset.management_form }}
 
-    {% for form in kpi_formset %}
-    <tr>
-      <td>{{ form.instance.kpi.name }}</td>
-      <td>{{ form.expected_target }}</td>
-      <td>{{ form.actual_value }}</td>
-      <td>{{ form.remark }}</td>
-    </tr>
-    {% endfor %}
-  </table>
+        <!-- KPI Table -->
+        <h3>KPI Performance Report</h3>
+        <table class="table-auto border-collapse border border-gray-300 w-full mb-4">
+            <tr class="bg-gray-100">
+                <th class="border px-2 py-1">KPI</th>
+                <th class="border px-2 py-1">Target</th>
+                <th class="border px-2 py-1">Actual</th>
+                <th class="border px-2 py-1">Remark</th>
+            </tr>
+            {% for form in kpi_formset %}
+            <tr>
+                <td class="border px-2 py-1">{{ form.instance.kpi.name }}</td>
+                <td class="border px-2 py-1">{{ form.expected_target }}</td>
+                <td class="border px-2 py-1">{{ form.actual_value }}</td>
+                <td class="border px-2 py-1">{{ form.remark }}</td>
+            </tr>
+            {% endfor %}
+        </table>
 
-  <button type="submit">Submit Report</button>
-</form>
+        <!-- Major Activity Table -->
+        <h3>Major Activity Report</h3>
+        <table class="table-auto border-collapse border border-gray-300 w-full mb-4">
+            <tr class="bg-gray-100">
+                <th class="border px-2 py-1">Activity</th>
+                <th class="border px-2 py-1">Progress (%)</th>
+                <th class="border px-2 py-1">Budget Used</th>
+                <th class="border px-2 py-1">Challenge</th>
+                <th class="border px-2 py-1">Mitigation</th>
+            </tr>
+            {% for form in activity_formset %}
+            <tr>
+                <td class="border px-2 py-1">{{ form.instance.major_activity.major_activity }}</td>
+                <td class="border px-2 py-1">{{ form.progress }}</td>
+                <td class="border px-2 py-1">{{ form.actual_budget_used }}</td>
+                <td class="border px-2 py-1">{{ form.challenge }}</td>
+                <td class="border px-2 py-1">{{ form.mitigation }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% if report.status == "DRAFT" %}
+        <button type="submit"
+            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            Submit Report
+        </button>
+        {% endif %}
+        
+    </form>
+</div>
