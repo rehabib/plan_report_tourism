@@ -35,6 +35,12 @@
             <textarea name="comment" required class="border p-2"></textarea>
             <button class="px-4 py-2 bg-red-600 text-white rounded">Reject</button>
         </form>
+
+        <form method="post" action="{% url 'reject_report' report.pk %}">
+            {% csrf_token %}
+            <textarea name="comment" required class="border p-2"></textarea>
+            <button class="px-4 py-2 bg-red-600 text-white rounded">Review</button>
+        </form>
     </div>
     {% endif %}
 
